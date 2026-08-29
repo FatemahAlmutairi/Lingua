@@ -25,6 +25,11 @@
   --color-surface: #f6f7fb;
   --color-background: #ffffff;
 
+  /* Soft tinted backgrounds (e.g. home screen goal/next-up cards) */
+  --color-peach: #fceee1;
+  --color-peach-track: #f5dcc2;
+  --color-mint: #eef5e5;
+
   /* Font families (loaded via expo-font in app/_layout.tsx) */
   --font-poppins-regular: "Poppins-Regular";
   --font-poppins-medium: "Poppins-Medium";

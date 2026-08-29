@@ -26,4 +26,9 @@ export const Colors = {
   border: "#E5E7EB",
   surface: "#F6F7FB",
   background: "#FFFFFF",
+
+  // Soft tinted backgrounds (e.g. home screen goal/next-up cards)
+  peach: "#FCEEE1",
+  peachTrack: "#F5DCC2",
+  mint: "#EEF5E5",
 } as const;

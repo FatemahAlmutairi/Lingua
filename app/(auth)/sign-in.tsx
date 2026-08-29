@@ -3,6 +3,7 @@ import { AuthTextField } from "@/components/auth-text-field";
 import { SocialAuthButton } from "@/components/social-auth-button";
 import { VerificationModal } from "@/components/verification-modal";
 import { resolveClerkAuthError } from "@/lib/clerk";
+import { posthog } from "@/lib/posthog";
 import { Colors } from "@/theme";
 import { useClerk, useSignIn } from "@clerk/expo";
 import { useSSO } from "@clerk/expo/experimental";
@@ -11,6 +12,8 @@ import { Link, router } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -44,6 +47,7 @@ export default function SignIn() {
         return;
       }
 
+      posthog?.capture("sign_in_code_requested");
       setIsVerifying(true);
     } catch (err) {
       setError(await resolveClerkAuthError(err, signOut));
@@ -64,6 +68,7 @@ export default function SignIn() {
         return resolveClerkAuthError(finalizeError, signOut);
       }
 
+      posthog?.capture("sign_in_completed", { method: "email_code" });
       return null;
     } catch (err) {
       return resolveClerkAuthError(err, signOut);
@@ -74,6 +79,7 @@ export default function SignIn() {
     setError(null);
     setSocialLoading(strategy);
     try {
+      posthog?.capture("social_auth_started", { flow: "sign_in", provider: strategy });
       await startSSOFlow({ strategy });
     } catch (err) {
       setError(await resolveClerkAuthError(err, signOut));
@@ -84,6 +90,11 @@ export default function SignIn() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
+      >
       <View className="flex-1 px-6 pt-2">
         <TouchableOpacity
           onPress={() => router.back()}
@@ -165,6 +176,7 @@ export default function SignIn() {
           </Link>
         </View>
       </View>
+      </KeyboardAvoidingView>
 
       <VerificationModal
         visible={isVerifying}
