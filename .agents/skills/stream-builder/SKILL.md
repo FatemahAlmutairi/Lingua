@@ -315,4 +315,4 @@ When building apps that combine multiple products, read each relevant `reference
 
 ## Reference file paths
 
-Blueprint files live under `agent-skills/skills/stream-builder/references/` inside the Stream skill pack. Reference them as `agent-skills/skills/stream-builder/references/FEEDS.md` from the **root of this repository**. Do not use machine-specific absolute paths.
+Blueprint files live under `.agents/skills/stream-builder/references/` inside the Stream skill pack. Reference them as `.agents/skills/stream-builder/references/FEEDS.md` from the **root of this repository**. Do not use machine-specific absolute paths.

@@ -110,7 +110,7 @@ After dependencies are installed, keep optional UI inside the normal `Channel` a
 
 ### Babel and entry point
 
-The Reanimated or Worklets plugin must be last:
+**React Native CLI (and Expo below SDK 54) only** - the Reanimated or Worklets plugin must be last:
 
 ```js
 module.exports = {
@@ -123,6 +123,8 @@ module.exports = {
 ```
 
 Use `react-native-reanimated/plugin` when the app is on Reanimated 3. Use `react-native-worklets/plugin` for Reanimated 4+.
+
+**Expo SDK 54+:** do not add this Babel plugin or create a `babel.config.js` for it - keep `babel-preset-expo` as-is; it resolves and appends `react-native-worklets/plugin` automatically whenever the package is installed, so a hand-written config duplicates the plugin.
 
 Wrap the entry point:
 
@@ -214,7 +216,7 @@ Local demo tokens can come from [`../credentials.md`](../credentials.md).
 - Keep `Chat` high and stable so screen transitions do not reconnect the socket.
 - Pass `channel.cid` through navigation params. Do not pass `Channel` objects.
 - Recreate a channel from `client.channel(type, id)` in the destination screen.
-- Use `keyboardVerticalOffset={headerHeight}` on `Channel`, and pair it with `topInset={headerHeight}` so the attachment picker bottom sheet reaches its full snap point when a native navigation header is present.
+- `keyboardVerticalOffset` / `topInset` on `Channel` offset for chrome **above** `Channel`, not a header rendered inside it. When a native/sibling navigation header sits above `Channel`, use `keyboardVerticalOffset={headerHeight}` paired with `topInset={headerHeight}` so the attachment picker bottom sheet reaches its full snap point. When the header is rendered **inside** `Channel` (`headerShown: false` + your own header view above `MessageList`), pass both explicitly as `0` instead - omitting `keyboardVerticalOffset` leaves it `undefined`, not `0`.
 - `bottomInset` stays opt-in. Add it only when a specific layout requires it (e.g. a tab bar that owns the bottom safe-area).
 - For threads, pass the active `thread` to the main `Channel` while the thread screen is open and render the thread screen with `threadList`.
 

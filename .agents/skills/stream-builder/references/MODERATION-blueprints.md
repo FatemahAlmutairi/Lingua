@@ -293,7 +293,7 @@ Individual flagged content card in the review queue. Shows content, reporter inf
 
 | Element | Read | Write | Property Path |
 |---|---|---|---|
-| `flagged-item__time` | Flag data | - | `flag.created_at` - **nanosecond epoch** in review queue items, divide by `1e6` for `new Date()` |
+| `flagged-item__time` | Flag data | - | `flag.created_at` - a datetime string; pass directly to `new Date()` |
 | `flagged-item__reporter` | Flag data | - | `flag.user.name` (reporter) |
 | `flagged-item__message-text` | Flag data | - | See content preview branching below |
 | `flagged-item__author-name` | Flag data | - | `flag.target_message.user.name` or `item.entity_creator_id` |
@@ -421,18 +421,20 @@ End-user settings page showing users they've blocked or muted, with unblock/unmu
 
 | Element | Read | Write | Property Path |
 |---|---|---|---|
-| Blocked users | `client.queryBannedUsers({ filter_conditions: { banned_by_id: currentUserId } })` | - | Returns `{ bans: [...] }` |
+| Blocked users | `client.getBlockedUsers()` | - | Returns `{ blocks: [...] }` - 1:1 blocks, not channel/global bans |
 | Muted users | `client.mutedUsers` | - | Available on `client.connectUser()` response |
 | Muted channels | `client.mutedChannels` | - | Available on `client.connectUser()` response |
-| `blocked-list__item-since` | Ban/mute data | - | `ban.created_at` or `mute.created_at` |
-| `blocked-list__item-expires` | Mute/ban data | - | `mute.expires` or `ban.expires` - null if permanent |
-| Unblock | - | `client.unbanUser(userId)` | - |
+| `blocked-list__item-since` | Block/mute data | - | `block.created_at` or `mute.created_at` |
+| `blocked-list__item-expires` | Mute data | - | `mute.expires` - null if permanent (1:1 blocks don't expire) |
+| Unblock | - | `client.unBlockUser(userId)` | - |
 | Unmute | - | `client.unmuteUser(userId)` | - |
 
 ### Requirements
 
 | Feature | Requirement | Default |
 |---|---|---|
-| Query banned users | `client.queryBannedUsers()` | Available |
+| Query blocked users | `client.getBlockedUsers()` | Available |
 | Muted users list | `client.mutedUsers` | Populated on connect |
 | Muted channels list | `client.mutedChannels` | Populated on connect |
+
+Ban management (`queryBannedUsers` / `unbanUser`) is a separate, channel/global moderation flow - keep it out of this end-user "Blocked & Muted" list, which covers 1:1 blocking only.

@@ -164,7 +164,7 @@ Container for the active call. Manages participant arrangement in different layo
 | `call-layout__screen-share-video` | Screen share participant's video track | Assign to `srcObject` | `participant.screenShareStream` |
 | Layout mode | Client-side state | - | Auto-switch to spotlight when screen share starts |
 | Self-view | `call.state.localParticipant` | - | Current user's participant object |
-| Join request | `call.on('call.permission_request', cb)` | `call.grantPermissions(userId)` / `call.revokePermissions(userId)` | - |
+| Join request | `call.on('call.permission_request', cb)` | `call.grantPermissions(request.user.id, request.permissions)` / `call.revokePermissions(request.user.id, request.permissions)` | Both calls need the requesting user's id AND the permission list from the request event |
 
 ### Requirements
 
@@ -262,17 +262,21 @@ Bottom bar with call action buttons: mic, camera, screen share, participants, re
 <div class="call-controls">
 
   <div class="call-controls__group call-controls__group--media">
-    <button class="call-controls__btn call-controls__btn--mic" aria-pressed="true" aria-label="Toggle microphone">
-      <!-- aria-pressed="false" + modifier --off when muted -->
-      <span class="call-controls__icon call-controls__icon--mic"></span>
+    <div class="call-controls__mic-group">
+      <button class="call-controls__btn call-controls__btn--mic" aria-pressed="true" aria-label="Toggle microphone">
+        <!-- aria-pressed="false" + modifier --off when muted -->
+        <span class="call-controls__icon call-controls__icon--mic"></span>
+      </button>
       <!-- OPTIONAL: device selector dropdown arrow -->
       <button class="call-controls__device-toggle call-controls__device-toggle--mic" aria-label="Select microphone"></button>
-    </button>
+    </div>
 
-    <button class="call-controls__btn call-controls__btn--camera" aria-pressed="true" aria-label="Toggle camera">
-      <span class="call-controls__icon call-controls__icon--camera"></span>
+    <div class="call-controls__camera-group">
+      <button class="call-controls__btn call-controls__btn--camera" aria-pressed="true" aria-label="Toggle camera">
+        <span class="call-controls__icon call-controls__icon--camera"></span>
+      </button>
       <button class="call-controls__device-toggle call-controls__device-toggle--camera" aria-label="Select camera"></button>
-    </button>
+    </div>
 
     <button class="call-controls__btn call-controls__btn--screen-share" aria-pressed="false" aria-label="Share screen">
       <span class="call-controls__icon call-controls__icon--screen-share"></span>
@@ -386,7 +390,7 @@ Ringing UI when another user initiates a call. Shown as overlay or notification.
 | `incoming-call__type` | Call metadata | - | `call.type` - `'default'`, `'audio_room'`, `'livestream'` etc. |
 | `--accept` | - | `call.join()` | Transitions to call layout |
 | `--reject` | - | `call.leave({ reject: true })` | Dismisses the ring |
-| Ring event | Subscribe to `client.state.calls$` and filter by `call.state.callingState === CallingState.RINGING` | - | Fires when another user rings |
+| Ring event | Subscribe to `client.state.calls$` and filter by `call.state.callingState === CallingState.RINGING && call.isCreatedByMe === false` | - | Fires only for incoming rings - `RINGING` alone also matches a call the current user just started |
 | Auto-dismiss | Client-side timeout | - | Dismiss after ~30s if no action |
 
 ### Requirements

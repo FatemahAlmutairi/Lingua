@@ -49,7 +49,7 @@ getstream api UpdateCallType --name livestream --request '{"grants":{"host":["bl
 
 `video_primary_use_case` is an optional, app-level setting on the Stream app (one per app, nullable). It is a soft hint what the app is for. It is pure metadata, and does not affect configuration on runtime behavior.
 
-**This is not product selection.** The [Use Case Matching](../builder.md) table decides what to build. This setting only labels the app you already decided to build.
+**This is not product selection.** The [Use Case Matching](../SKILL.md#use-case-matching) table decides what to build. This setting only labels the app you already decided to build.
 
 **Allowed values** - hard-code these, do not try to discover it with `--help` or `--schema`:
 

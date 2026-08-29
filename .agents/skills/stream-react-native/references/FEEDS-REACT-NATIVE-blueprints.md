@@ -56,7 +56,7 @@ If no row matches, read [DOCS.md](DOCS.md) and [FEEDS-REACT-NATIVE.md](FEEDS-REA
 Use this when adding Stream Feeds to the app root. The pattern mirrors the [tutorial](https://getstream.io/activity-feeds/docs/react-native/) `app/_layout.tsx`. Replace the static credentials with values from the host app's auth flow.
 
 ```tsx
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { ActivityIndicator, Button, TextInput, View } from "react-native";
 import {
   StreamFeeds,
@@ -69,6 +69,37 @@ type Session = {
   token: string;
   userId: string;
   userName: string;
+};
+
+// LOCAL-DEMO ONLY - same shape as the Chat blueprint's LoginScreen (see
+// CHAT-REACT-NATIVE-blueprints.md). Gate behind `__DEV__` in production;
+// derive the real session server-side instead of a free-text form.
+const LoginScreen = ({
+  demoDefaults,
+  onSession,
+}: {
+  demoDefaults?: Partial<Session>;
+  onSession: (session: Session) => void;
+}) => {
+  const [apiKey, setApiKey] = useState(demoDefaults?.apiKey ?? "");
+  const [token, setToken] = useState(demoDefaults?.token ?? "");
+  const [userId, setUserId] = useState(demoDefaults?.userId ?? "");
+  const [userName, setUserName] = useState(demoDefaults?.userName ?? "");
+
+  const signIn = useCallback(() => {
+    if (!apiKey || !token || !userId) return;
+    onSession({ apiKey, token, userId, userName: userName || userId });
+  }, [apiKey, onSession, token, userId, userName]);
+
+  return (
+    <View style={{ flex: 1, justifyContent: "center", padding: 24 }}>
+      <TextInput autoCapitalize="none" onChangeText={setApiKey} placeholder="API key" value={apiKey} />
+      <TextInput autoCapitalize="none" onChangeText={setToken} placeholder="User token" value={token} />
+      <TextInput autoCapitalize="none" onChangeText={setUserId} placeholder="User id" value={userId} />
+      <TextInput autoCapitalize="words" onChangeText={setUserName} placeholder="User name" value={userName} />
+      <Button disabled={!apiKey || !token || !userId} onPress={signIn} title="Sign in (demo)" />
+    </View>
+  );
 };
 
 const ConnectedFeeds = ({
@@ -214,10 +245,10 @@ export const OwnFeedsContextProvider = ({ children }: PropsWithChildren) => {
         await Promise.all([
           feed.getOrCreate({ watch: true }),
           timeline.getOrCreate({ watch: true }),
-          // Watch foryou so reactions / new activities / follows propagate
-          // through the WebSocket and the Explore tab re-renders reactively.
-          // queryActivities cannot do this - it has no reactive subscription.
-          foryou.getOrCreate({ watch: true }),
+          // `foryou` does not support `watch` (the popular selector is
+          // non-real-time) - load it as a normal read. Refresh the Explore
+          // tab explicitly (e.g. a pull-to-refresh calling getOrCreate again).
+          foryou.getOrCreate(),
         ]);
         // Self-follow: own posts only appear on own timeline once timeline follows user.
         const alreadyFollows = feed.currentState.own_follows?.find(
@@ -498,12 +529,18 @@ import { useFeedContext } from "@stream-io/feeds-react-native-sdk";
 export const ActivityComposer = () => {
   const feed = useFeedContext();
   const [draft, setDraft] = useState("");
-  const canPost = draft.trim().length > 0;
+  const [isPosting, setIsPosting] = useState(false);
+  const canPost = draft.trim().length > 0 && !isPosting;
 
   const post = useCallback(async () => {
     if (!feed || !canPost) return;
-    await feed.addActivity({ text: draft, type: "post" });
-    setDraft("");
+    setIsPosting(true);
+    try {
+      await feed.addActivity({ text: draft, type: "post" });
+      setDraft("");
+    } finally {
+      setIsPosting(false);
+    }
   }, [feed, canPost, draft]);
 
   return (
@@ -799,8 +836,8 @@ export const ExploreScreen = () => {
 
 Wiring:
 
-- Reuses the same `ActivityList` the timeline uses - it reads `useFeedActivities()` from the nearest `<StreamFeed>` context, so reactions / new activities / follows propagate through the WebSocket and the list re-renders automatically.
-- `forYouFeed` comes from `OwnFeedsContextProvider`, which already calls `getOrCreate({ watch: true })` on it. Do not create / `getOrCreate` it again on this screen.
+- Reuses the same `ActivityList` the timeline uses - it reads `useFeedActivities()` from the nearest `<StreamFeed>` context. Unlike the timeline, `foryou` does **not** support `watch`, so this list does not update reactively - refresh it explicitly (e.g. a pull-to-refresh or a refresh button calling `forYouFeed.getOrCreate()` again).
+- `forYouFeed` comes from `OwnFeedsContextProvider`, which already calls `getOrCreate()` on it. Do not create / `getOrCreate` it again on mount - only re-call it for an explicit refresh.
 - For a tab nested in a navigator with a native iOS tab bar, pass `contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}` to the `ActivityList`'s underlying `FlatList` so the last item clears the tab bar.
 - **Empty list at first run?** That is almost always the server-side selector, not your code. Check that the `foryou` feed group has `activity_selectors` configured (the default is none = empty), and that the seeded activities meet the selector's threshold. With `popular` + `min_popularity: 1`, an activity needs at least one reaction / comment / bookmark / share. Seed one reaction per activity during demo setup ([`../credentials.md`](../credentials.md) > Step C7).
 - Layering selectors (e.g. `popular` and `following` together) is a way to show activities the user follows even when they have no reactions yet - useful in real apps where most activities will not be "popular" by the time the user first opens the tab.
@@ -923,7 +960,7 @@ type ReactionProps = { activity: ActivityResponse };
 
 export const Reaction = ({ activity }: ReactionProps) => {
   const client = useFeedsClient();
-  const hasReacted = (activity.own_reactions?.length ?? 0) > 0;
+  const hasReacted = activity.own_reactions?.some((r) => r.type === REACTION_TYPE) ?? false;
   const likeCount = activity.reaction_groups?.[REACTION_TYPE]?.count ?? 0;
 
   const toggle = useCallback(async () => {
@@ -934,9 +971,12 @@ export const Reaction = ({ activity }: ReactionProps) => {
         type: REACTION_TYPE,
       });
     } else {
+      // enforce_unique: this control only manages one reaction type per
+      // activity, so adding a new one should replace any other the user set.
       await client.addActivityReaction({
         activity_id: activity.id,
         type: REACTION_TYPE,
+        enforce_unique: true,
       });
     }
   }, [client, activity.id, hasReacted]);
@@ -995,7 +1035,7 @@ Loads comments for an activity that may not be present in the current feed (e.g.
 
 ```tsx
 import React, { useEffect, useState } from "react";
-import { Keyboard, Platform, StyleSheet, View } from "react-native";
+import { Keyboard, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 import {
@@ -1010,10 +1050,13 @@ export default function CommentsModal() {
   const insets = useSafeAreaInsets();
   const { activityId } = useLocalSearchParams<{ activityId: string }>();
   const [activity, setActivity] = useState<ActivityWithStateUpdates>();
+  const [loadError, setLoadError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     if (!client || !activityId) return;
+    setLoadError(false);
     const handle = client.activityWithStateUpdates(activityId);
     // The `comments` request shape is REQUIRED here. Without it, get() fetches
     // the activity but does NOT hydrate state.comments_by_entity_id, which is
@@ -1022,11 +1065,15 @@ export default function CommentsModal() {
     // > Activity details for the full explanation.
     handle
       .get({ comments: { limit: 25, sort: "last", depth: 2 } })
-      .then(() => setActivity(handle));
+      .then(() => setActivity(handle))
+      .catch((err) => {
+        console.error("Failed to load activity", err);
+        setLoadError(true);
+      });
     return () => {
       handle.dispose();
     };
-  }, [client, activityId]);
+  }, [client, activityId, retryCount]);
 
   // Keyboard avoidance via OS events + paddingBottom on the modal root.
   // KeyboardAvoidingView is unreliable inside native-stack `presentation: "modal"`
@@ -1047,6 +1094,15 @@ export default function CommentsModal() {
     };
   }, []);
 
+  if (loadError) {
+    return (
+      <View style={styles.container}>
+        <Pressable onPress={() => setRetryCount((n) => n + 1)}>
+          <Text>Couldn't load this post. Tap to retry.</Text>
+        </Pressable>
+      </View>
+    );
+  }
   if (!activity) return null;
 
   // iOS: endCoordinates.height already extends to the screen bottom (covers the
@@ -1224,16 +1280,22 @@ type CommentComposerProps = { activity: ActivityWithStateUpdates };
 export const CommentComposer = ({ activity }: CommentComposerProps) => {
   const client = useFeedsClient();
   const [draft, setDraft] = useState("");
-  const canReply = draft.trim().length > 0;
+  const [isPosting, setIsPosting] = useState(false);
+  const canReply = draft.trim().length > 0 && !isPosting;
 
   const submit = useCallback(async () => {
     if (!client || !canReply) return;
-    await client.addComment({
-      object_id: activity.id,
-      object_type: "activity",
-      comment: draft,
-    });
-    setDraft("");
+    setIsPosting(true);
+    try {
+      await client.addComment({
+        object_id: activity.id,
+        object_type: "activity",
+        comment: draft,
+      });
+      setDraft("");
+    } finally {
+      setIsPosting(false);
+    }
   }, [client, activity.id, draft, canReply]);
 
   return (
@@ -1407,7 +1469,7 @@ Wiring:
 Registers the device's OS push token with Stream so a backgrounded / killed app receives pushes for follows, comments, reactions, and mentions. This is **separate** from the in-app notification feed above. Read [FEEDS-REACT-NATIVE.md](FEEDS-REACT-NATIVE.md) > Push notifications first - the dashboard provider must exist and its **name** must match `push_provider_name`. Feeds uses `createDevice` / `deleteDevice` (the Video SDK's `addDevice` does not apply here).
 
 ```tsx
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
@@ -1417,24 +1479,31 @@ import { useFeedsClient } from "@stream-io/feeds-react-native-sdk";
 const PROVIDER_NAME_IOS = "your-apn-provider";
 const PROVIDER_NAME_ANDROID = "your-firebase-provider";
 
+// Returns an `unregister()` the caller can `await` (e.g. from sign-out) so the
+// device is actually removed before `disconnectUser()` runs - a plain effect
+// cleanup fires-and-forgets and can't be awaited, and unmount can race ahead
+// of a registration that's still in flight.
 export const usePushRegistration = () => {
   const client = useFeedsClient();
+  const registrationRef = useRef<Promise<string | undefined> | null>(null);
 
   useEffect(() => {
-    if (!client || !Device.isDevice) return;
-    let token: string | undefined;
+    if (!client || !Device.isDevice) {
+      registrationRef.current = null;
+      return;
+    }
 
-    const register = async () => {
+    const register = async (): Promise<string | undefined> => {
       const existing = await Notifications.getPermissionsAsync();
       let granted = existing.granted;
       if (!granted) {
         granted = (await Notifications.requestPermissionsAsync()).granted;
       }
-      if (!granted) return;
+      if (!granted) return undefined;
 
       // Native APNs / FCM device token (NOT the Expo push token).
       const devicePushToken = await Notifications.getDevicePushTokenAsync();
-      token = devicePushToken.data;
+      const token = devicePushToken.data;
 
       await client.createDevice({
         id: token,
@@ -1442,16 +1511,24 @@ export const usePushRegistration = () => {
         push_provider_name:
           Platform.OS === "ios" ? PROVIDER_NAME_IOS : PROVIDER_NAME_ANDROID,
       });
+      return token;
     };
 
-    register().catch((err) => console.error("Push registration failed", err));
-
-    return () => {
-      if (token) {
-        client.deleteDevice({ id: token }).catch((err) => console.error(err));
-      }
-    };
+    registrationRef.current = register().catch((err) => {
+      console.error("Push registration failed", err);
+      return undefined;
+    });
   }, [client]);
+
+  const unregister = async () => {
+    const token = await registrationRef.current?.catch(() => undefined);
+    registrationRef.current = null;
+    if (client && token) {
+      await client.deleteDevice({ id: token }).catch((err) => console.error(err));
+    }
+  };
+
+  return { unregister };
 };
 ```
 
@@ -1460,7 +1537,7 @@ Wiring:
 - Call `usePushRegistration()` from a component mounted **under** `<StreamFeeds>` after the user is connected (e.g. the navigator root). The hook no-ops until the client resolves.
 - Needs a dev-client / native build - Expo Go cannot receive remote push. Android also needs `google-services.json` + FCM set up; iOS needs the Push Notifications capability and an APNs key uploaded to the dashboard.
 - **RN CLI:** swap `expo-notifications` for `@react-native-firebase/messaging` - get the token with `messaging().getToken()` (FCM) / `messaging().getAPNSToken()` (iOS) and make the same `createDevice` call.
-- On sign-out, `deleteDevice` so the next user on the same device does not inherit these pushes (this hook does it on unmount; pair it with `client.disconnectUser()` in the Sign-out blueprint).
+- On sign-out, `await unregister()` **before** `client.disconnectUser()` in the Sign-out blueprint, so device removal completes (including the case where sign-out happens while registration is still in flight) before the connection tears down.
 - `push_provider` is `"apn"` (iOS) | `"firebase"` (Android); `push_provider_name` must match the dashboard provider name.
 - On iOS the native APNs token can be unavailable for a moment after permission is granted (the device registers with APNs asynchronously). If `getDevicePushTokenAsync()` rejects on first launch, retry or register from your push library's token-received listener instead of inline.
 - Displaying the push and handling the tap (deep-link to the activity / notification screen) is app-owned - see [FEEDS-REACT-NATIVE.md](FEEDS-REACT-NATIVE.md) > Push notifications > Backend trigger and handling the tap.
@@ -1504,5 +1581,5 @@ Wiring:
 
 - `client.disconnectUser()` releases the WebSocket and clears the connected user.
 - Call `activity.dispose()` (where applicable) on any open `activityWithStateUpdates` handles before signing out, or rely on screen unmount to dispose them.
-- If push is wired, unregister the device with `client.deleteDevice({ id: token })` before `disconnectUser()` so the next user on the device does not inherit these pushes (see Push Device Registration).
+- If push is wired, `await unregister()` from `usePushRegistration()` (see Push Device Registration) before `client.disconnectUser()`, so device removal completes - including when sign-out happens before registration finished - and the next user on the device does not inherit these pushes.
 - Do not print user tokens in final summaries or logs.

@@ -4,12 +4,14 @@ import { Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { posthog } from "@/lib/posthog";
 import { useLanguageStore } from "@/store/languageStore";
+import { useLearningStore } from "@/store/learningStore";
 import { Colors } from "@/theme";
 
 export default function Profile() {
   const { user } = useUser();
   const { signOut } = useClerk();
   const clearSelectedLanguage = useLanguageStore((state) => state.clearSelectedLanguage);
+  const resetProgress = useLearningStore((state) => state.resetProgress);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
@@ -45,6 +47,8 @@ export default function Profile() {
             onPress={async () => {
               posthog?.capture("user_signed_out");
               await signOut();
+              clearSelectedLanguage();
+              resetProgress();
             }}
             className="items-center justify-center rounded-full bg-purple py-4"
           >

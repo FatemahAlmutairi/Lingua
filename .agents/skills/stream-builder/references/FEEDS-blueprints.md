@@ -403,7 +403,7 @@ Used in livestreaming apps (Video + Feeds). A live activity represents an active
 | `live-card__title` | Activity data | - | `activity.text` |
 | `live-card__watch` | - | Navigate to watch view | `activity.custom.callId` |
 | Go Live (create, client-side) | - | `feed.addActivity({ type: 'live', text: title, custom: { callId } })` | Returns `StreamResponse<AddActivityResponse>` - save `result.activity.id` for cleanup |
-| Go Live (create, server-side) | - | `client.feeds.addActivity({ feeds: ['user:' + userId], type: 'live', text: title, custom: { callId } })` | Server route (`/api/feed/live`). `client.feeds.*` - NOT `client.*` directly. Returns `{ activity: { id } }` |
+| Go Live (create, server-side) | - | `client.feeds.addActivity({ user_id: userId, feeds: ['user:' + userId], type: 'live', text: title, custom: { callId } })` | Server route (`/api/feed/live`). `client.feeds.*` - NOT `client.*` directly. `user_id` is required for server-side `addActivity` (see FEEDS.md). Returns `{ activity: { id } }` |
 | End Stream (remove, client-side) | - | `client.deleteActivity({ id: liveActivityId })` | Use the activity ID saved from Go Live |
 | End Stream (remove, server-side) | - | `client.feeds.deleteActivity({ id: liveActivityId })` | Server route. `client.feeds.*` - NOT `client.*` directly |
 

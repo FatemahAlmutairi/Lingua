@@ -16,13 +16,14 @@ Before writing any code, understand what's already in place:
 
 1. **Packages:** check `package.json` for `stream-chat`, `stream-chat-react`, `@stream-io/video-react-sdk`, `@stream-io/node-sdk`.
 2. **Auth:** does the app already have a `/api/token` route? If so, **extend** it with the new product's token - don't create a second token route.
-3. **Credentials:** check for `.env` with `STREAM_API_KEY` / `STREAM_API_SECRET`. If missing, run `getstream init` (if the dir isn't a Stream project yet) then `getstream env` to write them - never read or print the secret.
+3. **Credentials:** check whether `.env.local` or a legacy `.env` **exists** (`test -f .env.local -o -f .env`) - by file existence only, never read or print their contents. If neither exists, run `getstream init` (if the dir isn't a Stream project yet) then `getstream env` to write them. If either already exists, skip `getstream init`/`getstream env` for this step.
 4. **UI framework:** confirm Tailwind, Shadcn, or whatever the project uses. Do **not** install Shadcn or change the styling setup unless the user asks.
 5. **Directory structure:** note whether the project uses `app/` or `src/app/` - match the existing convention.
+6. **Package manager:** detect from the lockfile (`package-lock.json` -> npm, `yarn.lock` -> yarn, `pnpm-lock.yaml` -> pnpm) and use it for every install below.
 
 ## E2: Install + configure
 
-1. **Install** only the new SDKs: `npm install <new-packages> --legacy-peer-deps` (the `stream` skill's [`RULES.md`](../stream/RULES.md) > Package manager).
+1. **Install** only the new SDKs, using the package manager detected in E1 (npm, yarn, or pnpm from the project's lockfile) - `npm install <new-packages> --legacy-peer-deps` only for npm projects; translate the flags/command for yarn/pnpm without adding a second lockfile.
 2. **Configure via CLI:** run setup commands from the relevant `references/<Product>.md` (App Integration -> Setup). Feeds needs feed groups created; Moderation needs blocklist + config.
 3. **Import CSS** if the product needs it (Chat: `stream-chat-react/css/index.css` (v14+ preferred alias; v13 used `dist/css/v2/index.css`), Video: `@stream-io/video-react-sdk/dist/css/styles.css`).
 

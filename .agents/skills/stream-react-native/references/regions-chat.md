@@ -169,10 +169,11 @@ the last row with the text) is **structural** — no theme key moves metadata in
 1. **Render the metadata in an in-bubble slot** — `MessageContentBottomView` (below the text) or
    `MessageContentTrailingView` (same row as the text, trailing edge). These are *inside* the bubble
    background; `MessageFooter`/`MessageHeader` are *outside* it. Some designs float the timestamp
-   *inline on the last text line* when it fits and wrap it below only when the line is too long;
-   reproducing that is fiddly, and metadata on its own line below the text
-   (`MessageContentBottomView`) is an acceptable approximation — but it IS a visible difference, so
-   choose it deliberately and note it.
+   *inline on the last text line* when it fits and wrap it below only when the line is too long.
+   Reproducing that inline-wrap behavior is fiddly; if you instead render metadata on its own line
+   below the text (`MessageContentBottomView`), that is a visible structural difference from the
+   reference — attempt the inline-wrap version first, and only fall back to the simpler layout if you
+   can state concretely why the inline version isn't achievable, per the Fixed/Impossible rule above.
 2. **Suppress the default outside footer** so it isn't duplicated below the bubble: set
    `MessageFooter` to `() => null` via `WithComponents`.
 3. **Reproduce the bubble's own padding** — these content slots have **no padding of their own**, so

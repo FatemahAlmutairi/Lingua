@@ -268,8 +268,9 @@ const result = await feed.addActivity({ type: 'post', text: 'Hello world' });
 // result.activity.id - the created activity's ID (nested inside response)
 // result.activity - full ActivityResponse of the created post
 
-// Activities - via FeedsClient (for multi-feed posts)
-await client.addActivity({ feeds: ['user:community'], type: 'post', text });
+// Activities - via FeedsClient (for multi-feed posts) - target feeds the user
+// actually owns/can publish to, e.g. their own feed:
+await client.addActivity({ feeds: [`user:${userId}`], type: 'post', text });
 
 // Delete activity
 await client.deleteActivity({ id: activityId });

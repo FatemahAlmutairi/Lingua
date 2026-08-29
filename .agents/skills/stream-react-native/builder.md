@@ -97,7 +97,7 @@ npx expo install @stream-io/video-react-native-sdk \
 npx expo install react-native-reanimated react-native-worklets react-native-gesture-handler
 ```
 
-Add `@stream-io/video-react-native-sdk` and `@config-plugins/react-native-webrtc` to `app.json` `plugins`. On Expo SDK 54+ do **not** add a Babel plugin or a `babel.config.js` — `babel-preset-expo` appends `react-native-worklets/plugin` itself (§5 > Babel plugin). Also enable Android edge-to-edge under `android` in `app.json` (`"edgeToEdgeEnabled": true`; default-on Expo SDK 54+). Then `npx expo prebuild --clean`.
+Add `@stream-io/video-react-native-sdk`, `@config-plugins/react-native-webrtc`, and `expo-build-properties` (with `{ "android": { "minSdkVersion": 24 } }`) to `app.json` `plugins` - installing `expo-build-properties` above without adding it to `plugins` leaves the required Android minimum SDK unapplied. On Expo SDK 54+ do **not** add a Babel plugin or a `babel.config.js` — `babel-preset-expo` appends `react-native-worklets/plugin` itself (§5 > Babel plugin). Also enable Android edge-to-edge under `android` in `app.json` (`"edgeToEdgeEnabled": true`; default-on Expo SDK 54+). Then `npx expo prebuild --clean`.
 
 **Video - RN CLI:**
 

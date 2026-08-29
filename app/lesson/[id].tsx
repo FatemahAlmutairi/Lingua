@@ -59,7 +59,23 @@ export default function AudioLessonScreen() {
   }, []);
 
   if (!lesson) {
-    return null;
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
+        <View className="flex-1 items-center justify-center gap-4 px-8">
+          <Ionicons name="alert-circle-outline" size={40} color={Colors.textSecondary} />
+          <Text className="text-body-lg font-poppins-semibold text-text-primary">
+            Lesson not found
+          </Text>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => router.replace("/(tabs)")}
+            className="items-center justify-center rounded-full bg-purple px-6 py-3"
+          >
+            <Text className="text-body-md font-poppins-semibold text-white">Back to Learn</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   const language = getLanguageByCode(lesson.languageCode);

@@ -155,7 +155,7 @@ Android `AndroidManifest.xml` (before `<application>`) - **base permissions for 
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
 <!-- Screen share (Expo plugin: enableScreenshare: true) -->
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -203,8 +203,14 @@ export default function ConnectedVideo({ apiKey, user }: { apiKey: string; user:
   const [client, setClient] = useState<StreamVideoClient>();
 
   useEffect(() => {
+    // The endpoint derives the Stream user from the authenticated request
+    // (cookie/bearer/OAuth header attached by the app's own http client) -
+    // never from a client-supplied user_id param, which would let any
+    // signed-in caller mint a token for any user.
     const tokenProvider = async () => {
-      const res = await fetch(`https://your-api.example.com/stream-token?user_id=${user.id}`);
+      const res = await fetch("https://your-api.example.com/stream-token", {
+        credentials: "include",
+      });
       return (await res.json()).token as string;
     };
     const c = StreamVideoClient.getOrCreateInstance({ apiKey, user, tokenProvider });
@@ -261,8 +267,11 @@ Pass the literal token to `StreamVideoClient`. Never use a no-expiry token in pr
 ### Token provider (expiring tokens)
 
 ```ts
+// Endpoint derives the Stream user id from the authenticated request itself -
+// never from a client-supplied user_id param (see Production auth gate in
+// VIDEO-REACT-NATIVE-blueprints.md).
 const tokenProvider = async () => {
-  const res = await fetch(`https://your-api.example.com/stream-token?user_id=${userId}`);
+  const res = await fetch("https://your-api.example.com/stream-token", { credentials: "include" });
   const body = await res.json();
   return body.token as string;
 };

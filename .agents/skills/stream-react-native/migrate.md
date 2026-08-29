@@ -111,7 +111,7 @@ Run with the **detected** package manager (do not introduce a second lockfile). 
 # Run from an ABSOLUTE cd into the project, and do NOT pipe it: a pipe returns the pipe's exit
 # status (so `| head` prints 0 on a failing typecheck), and `npx tsc` outside the project resolves
 # an unrelated registry package that prints "This is not the tsc command you are looking for".
-cd <abs-project-path> && npx tsc --noEmit > /tmp/tsc.log 2>&1; echo "EXIT=$?"; tail -20 /tmp/tsc.log
+cd <abs-project-path> && npx tsc --noEmit > /tmp/tsc.log 2>&1; TSC_EXIT=$?; echo "EXIT=$TSC_EXIT"; tail -20 /tmp/tsc.log; exit $TSC_EXIT
 # or: yarn tsc --noEmit / pnpm exec tsc --noEmit  - reports all type errors at once
 ```
 

@@ -861,7 +861,7 @@ Livestreams use the `livestream` call type. The host publishes (WebRTC, or RTMP-
 `HostLivestream` is the full host UI. Create a `livestream` call, join with `create: true` and the host as a member, then render `HostLivestream` inside `<StreamCall>`. The SDK's built-in start/stop control drives `call.goLive()` / `call.stopLive()`.
 
 ```tsx
-import { useEffect, useMemo } from "react";
+import { useEffect, useState } from "react";
 import {
   Call,
   CallingState,
@@ -874,23 +874,25 @@ import {
 export const HostLivestreamScreen = ({ callId }: { callId: string }) => {
   const client = useStreamVideoClient();
   const me = useConnectedUser();
-
-  const call = useMemo<Call | undefined>(
-    () => (client ? client.call("livestream", callId, { reuseInstance: true }) : undefined),
-    [client, callId],
-  );
+  const [call, setCall] = useState<Call>();
 
   useEffect(() => {
-    if (!call || !me) return;
-    call
-      .join({ create: true, data: { members: [{ user_id: me.id, role: "host" }] } })
-      .catch((err) => console.error("Failed to start livestream", err));
+    if (!client || !me) return;
+    // Create in useEffect (not useMemo) - matches the Active Call Screen
+    // pattern; useMemo isn't guaranteed to run exactly once and shouldn't be
+    // relied on to construct/hold a stateful instance like this.
+    const c = client.call("livestream", callId, { reuseInstance: true });
+    setCall(c);
+    c.join({ create: true, data: { members: [{ user_id: me.id, role: "host" }] } }).catch((err) =>
+      console.error("Failed to start livestream", err),
+    );
     return () => {
-      if (call.state.callingState !== CallingState.LEFT) {
-        call.leave().catch((err) => console.error(err));
+      if (c.state.callingState !== CallingState.LEFT) {
+        c.leave().catch((err) => console.error(err));
       }
+      setCall(undefined);
     };
-  }, [call, me]);
+  }, [client, me, callId]);
 
   if (!call) return null;
   return (
@@ -908,17 +910,30 @@ For RTMP-in (broadcast from OBS), read the ingress address + stream key from `ca
 The simplest viewer is `LivestreamPlayer`, which takes `callId` + `callType` props and manages its own call instance:
 
 ```tsx
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { callManager, LivestreamPlayer } from "@stream-io/video-react-native-sdk";
 
 export const ViewerScreen = ({ callId }: { callId: string }) => {
+  const [audioReady, setAudioReady] = useState(false);
+
   useEffect(() => {
+    let mounted = true;
     // A watch-only viewer is a "listener", not a "communicator".
-    // This is the one place you start callManager yourself.
-    callManager.start({ audioRole: "listener", enableStereoAudioOutput: true });
-    return () => callManager.stop();
+    // This is the one place you start callManager yourself. Gate the join
+    // on this resolving so the listener audio role is set up before the
+    // player connects, rather than racing it.
+    callManager
+      .start({ audioRole: "listener", enableStereoAudioOutput: true })
+      .then(() => {
+        if (mounted) setAudioReady(true);
+      });
+    return () => {
+      mounted = false;
+      callManager.stop();
+    };
   }, []);
 
+  if (!audioReady) return null;
   return <LivestreamPlayer callId={callId} callType="livestream" />;
 };
 ```

@@ -19,6 +19,9 @@ Rules: [../../stream/RULES.md](../../stream/RULES.md) (moderation is Dashboard-o
 **Packages:** `@stream-io/node-sdk` (server), `stream-chat` (server - for chat message deletion)
 
 **CLI commands (run when moderation is included):**
+
+`<generate a comprehensive list of common profanity>` below is a placeholder for the agent to fill in - substitute it with a real, comma-separated, quoted JSON string array of words before running the command. It is not valid JSON as written and must never be run literally.
+
 ```bash
 # Create blocklist (NOT idempotent - check first to avoid 400 error):
 getstream api ListBlockLists 2>&1 | grep -q '"profanity"' || \

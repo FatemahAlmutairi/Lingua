@@ -277,7 +277,7 @@ Use when the user wants package install and shared wiring more than a full featu
 - detect RN CLI vs Expo
 - use `llms.txt` lookup for the matching product's Installation docs and verify current npm dist-tags
 - install the correct package and required peers (Chat: `stream-chat-react-native` or `stream-chat-expo`; Video: `@stream-io/video-react-native-sdk`; Feeds: `@stream-io/feeds-react-native-sdk` + `@react-native-community/netinfo`)
-- Chat-specific wiring: add Reanimated/Worklets Babel plugin as the last plugin, wrap the entry point with `GestureHandlerRootView`, place `OverlayProvider` and `Chat`, wire `useCreateChatClient` or the app's backend token provider
+- Chat-specific wiring: on RN CLI and Expo below SDK 54, add the Reanimated/Worklets Babel plugin as the last plugin (omit this on Expo SDK 54+ - `babel-preset-expo` appends it automatically; do not hand-write a `babel.config.js` there); wrap the entry point with `GestureHandlerRootView`, place `OverlayProvider` and `Chat`, wire `useCreateChatClient` or the app's backend token provider
 - Video-specific wiring: declare camera/mic permissions, add Expo config plugins where applicable, create `StreamVideoClient` and mount `StreamVideo`
 - Feeds-specific wiring: call `useCreateFeedsClient` (returns `undefined` while connecting), mount `<StreamFeeds client={client}>` once near the app root, and (typically) wrap an `OwnFeedsContextProvider` that creates the user + timeline feeds and the self-follow
 - stop before product-specific UI if the user only asked for setup
@@ -293,7 +293,7 @@ Use when the user wants package install and shared wiring more than a full featu
 | **M1** | Detect | Run Project signals + read `package.json`/lockfile: which Stream packages, their from -> to versions, runtime lane, package manager, and RN/Expo New-Architecture status. |
 | **M2** | Fetch the guide | From the product manifest ([`references/DOCS.md`](references/DOCS.md)) fetch the matching upgrade guide (known entry point: Chat RN **v8 -> v9**). Hard gate on failure -> `stream-docs` -> stop and ask. |
 | **M2.5** | Prerequisites | Clear RN-specific blockers first: New Architecture requirement, new native/peer deps (e.g. `react-native-teleport` for Chat v9), native rebuild. |
-| **M3** | Apply | Bump only the targeted packages (each at its own target; bump the lane's Chat wrapper), apply every documented breaking change, ground each symbol in installed `node_modules/stream-chat-react-native-core` source, grep for renamed symbols, do native config + keyboard cleanup. |
+| **M3** | Apply | Bump only the targeted packages (each at its own target; bump the lane's Chat wrapper), apply every documented breaking change, ground each symbol in the installed SDK package for the **migrated product** (e.g. `node_modules/stream-chat-react-native-core` for Chat; the Video or Feeds package for those migrations), grep for renamed symbols, do native config + keyboard cleanup. |
 | **M4** | Verify | `tsc --noEmit` -> Metro bundle -> native build -> simulator/device smoke of the core flow. No `next build`; a green `tsc` is not a render. Run gate commands from an absolute `cd` and **never piped** - a pipe returns the pipe's exit status, not the command's. |
 | **M5** | Summarize | Packages bumped, breaking changes applied, native/New-Arch changes, files touched, manual follow-ups. Offer (don't auto-run) the next step. |
 

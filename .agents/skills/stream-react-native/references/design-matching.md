@@ -70,7 +70,7 @@ dimension matters — extract the real numbers off the reference and land them i
        return b
    wr = np.array([run(g[y]) for y in range(H-380,H)]); ys=np.where(wr>W*.45)[0]+(H-380)
    ft,fb = ys.min(),ys.max(); print("field h", (fb-ft+1)/S)         # logical px
-   wc = np.where(g[(ft+fb)//2] > 246)[0]; print("field w", (wc.max()-wc.min())/S)
+   wc = np.where(g[(ft+fb)//2] > 246)[0]; print("field w", (wc.max()-wc.min()+1)/S)
    dark = (g[ft-6:fb+6,:] < 110); cols=np.where(dark.sum(0)>2)[0]    # icon glyphs
    # cluster contiguous columns (gap>8) → each glyph's w/h in logical px
    ```
@@ -321,9 +321,11 @@ tap-free (§1), stale-bundle trap (§2), reaching non-initial screens (§3), dri
 
 An empty or one-message channel hides exactly the elements that get dropped. The test channel needs:
 **an incoming and an outgoing** message; a **run of 3+ consecutive messages from the same author**
-(grouping + the avatar rule); a **photo album**; a message **with reactions**; a **reply / thread**; a
-**long multi-line** message. Mark messages read if the design shows read receipts. Seed via the Stream
-CLI / [`../credentials.md`](../credentials.md).
+(grouping + the avatar rule); a **photo album**; a message **with reactions**; a **long multi-line**
+message. Add a **reply / thread** fixture only when threads are in scope per the thread scope decision
+above - for a flat/no-threads build, omit it and instead verify the message row shows no thread
+affordance (its own pass/fail, not a region left unseeded). Mark messages read if the design shows read
+receipts. Seed via the Stream CLI / [`../credentials.md`](../credentials.md).
 
 **Multi-day date separators ("Yesterday", "May 29") can't be fresh-seeded** — the seed API stamps
 everything today, so only a "Today" separator appears.

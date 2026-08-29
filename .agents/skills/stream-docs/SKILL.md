@@ -182,7 +182,12 @@ grep -oE '"(stream-chat-react|stream-chat-react-native|stream-chat-expo|stream-c
 Non-npm:
 
 ```bash
-ls pubspec.yaml go.mod requirements.txt pyproject.toml Podfile build.gradle 2>/dev/null
+grep -l "stream_chat\|stream_video" pubspec.yaml 2>/dev/null
+grep -l "getstream-go\|GetStream" go.mod 2>/dev/null
+grep -l "getstream" requirements.txt pyproject.toml 2>/dev/null
+grep -l "StreamChat\|StreamVideo" Podfile *.xcodeproj/project.pbxproj 2>/dev/null
+grep -l "io.getstream" build.gradle app/build.gradle 2>/dev/null
+ls *.xcodeproj 2>/dev/null
 ```
 
 Either way, extract the **major version** from semver (e.g. `"stream-chat-react": "^13.2.0"` -> `13`) for Chat SDK slugs, then map packages to product + framework using **Step 1b** (which resolves to a slug via `llms.txt`).
@@ -329,7 +334,7 @@ Video, Feeds, and Moderation slugs don't have version suffixes. Skip this step f
 
 For Chat SDK slugs (`chat-sdk-*`):
 
-1. **If the user specified a version** (e.g. `v14`) -> try the versioned URL first: `chat-sdk-react-v14.md`. If it returns 200, you're done. If it 404s, fall back to the base URL (`chat-sdk-react.md`) - this means the version the user named IS the current latest.
+1. **If the user specified a version** (e.g. `v14`) -> try the versioned URL first: `chat-sdk-react-v14.md`. If it returns 200, you're done. If it 404s, fetch the base URL (`chat-sdk-react.md`) and check its `# Heading` line: if the heading names the version the user requested (e.g. `# React v14 (Latest)`), the 404 meant that version IS the current latest - use the base content. If the heading names a **different** version, the requested version does not exist at all - tell the user it isn't available and name what the docs do have (don't silently serve the base content as if it answered their version).
 
 2. **If the user didn't specify a version, or said "latest"** -> use the base URL directly. It always returns the latest version. The `# Heading` line will announce which version that is (e.g. `# React v13 (Latest)`) - use this when citing.
 
@@ -421,7 +426,7 @@ The slug was wrong - but you already have `llms.txt` in context from Step 1b. Re
 3. If still 404 or no matching slug exists in `llms.txt`, tell the user the SDK isn't in the docs and list what's available
 
 ### 404 on Chat SDK versioned URL
-The version the user named is the current latest - fall back to the base URL (`chat-sdk-react.md` instead of `chat-sdk-react-v13.md`). This is expected behavior, not a real failure.
+Fetch the base URL (`chat-sdk-react.md` instead of `chat-sdk-react-v13.md`) and check its `# Heading`. If it confirms the requested version is the current latest, use it - this is expected behavior, not a real failure. If the heading names a different version, the requested version isn't published at all - report that plainly instead of assuming latest.
 
 ### Fetched page doesn't answer the question
 - Check the framework index for related pages (same section, similar title)

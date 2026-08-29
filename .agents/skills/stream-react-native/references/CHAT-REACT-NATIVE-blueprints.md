@@ -177,7 +177,7 @@ Wiring:
 
 - `useCreateChatClient` returns `StreamChat | null`.
 - Clearing `session` unmounts `ConnectedChat` and lets the hook disconnect.
-- For production, fetch tokens from the app backend.
+- **This `LoginScreen` (free-text userId/token entry) is a local-dev pattern only - gate it behind `__DEV__` or a feature flag so it cannot ship in a production build** (see [`../sdk.md`](../sdk.md#auth-model) > Auth model). In production, the Stream user id must come from the app's own authenticated session, never a value typed into a form; `tokenOrProvider` should be a stable token-provider callback that re-hits an authenticated backend endpoint (so tokens refresh automatically), not the static `session.token` string used here for local demos.
 - For local demos, prefill editable form values from CLI-generated API key, token, user, and channel setup when available.
 - Do not print user tokens in final summaries or logs.
 
@@ -215,7 +215,7 @@ npm install react-native-safe-area-context
 npx pod-install
 ```
 
-**Install navigation (required - blueprints below assume it).** RN CLI has no navigation by default and the bundled blueprints import from `@react-navigation/*` (including `useHeaderHeight` from `@react-navigation/elements`). For RN CLI: `npm install @react-navigation/native @react-navigation/native-stack @react-navigation/elements react-native-screens` then `npx pod-install`. For Expo, `create-expo-app` ships **Expo Router** under `app/` - skip the React Navigation install and use the Expo Router branch of the Navigation Shell blueprint instead. (Expo apps that prefer React Navigation can `npx expo install` the same four packages.)
+**Install navigation (required - blueprints below assume it).** RN CLI has no navigation by default and the bundled blueprints import from `@react-navigation/*` (including `useHeaderHeight` from `@react-navigation/elements`). For RN CLI: `npm install @react-navigation/native @react-navigation/native-stack @react-navigation/elements react-native-screens` then `npx pod-install`. For Expo, `create-expo-app` ships **Expo Router** under `app/` - skip the React Navigation install and use the Expo Router branch of the Navigation Shell blueprint instead. (Expo Router **SDK 55 and below** can opt into React Navigation instead with `npx expo install` of the same four packages. On **Expo Router SDK 56+, never install `@react-navigation/*`** - Metro fails to bundle if any of those packages are present; use the Expo-Router-native replacements instead, e.g. the `Platform.OS + useSafeAreaInsets().top` swap in the Channel Screen blueprint below.)
 
 After scaffolding and navigation install, continue with these sections in order: App Provider and Auth Gate, Navigation Shell, Channel List Screen, and Channel Screen. Start Expo with `npx expo start --dev-client`; do not target Expo Go. Optional native capabilities stay opt-in and use the dependency map in [CHAT-REACT-NATIVE.md](CHAT-REACT-NATIVE.md).
 

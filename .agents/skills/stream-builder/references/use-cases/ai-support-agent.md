@@ -137,6 +137,7 @@ Keep it light: the id can be generated client-side (a short nanoid, or a slice o
 ```ts
 export const maxDuration = 300; // the turn runs after the 200; keep the function alive
 
+import { after } from "next/server";
 import { gunzipSync, brotliDecompressSync, inflateSync } from "node:zlib";
 
 export async function POST(req: Request) {
@@ -164,7 +165,10 @@ export async function POST(req: Request) {
     return Response.json({ ok: true, skipped: true });
   }
   const channelId = evt.channel_id ?? evt.cid?.split(":")[1];
-  processTurn(channelId).catch(console.error);        // fire-and-forget so we return in <3s
+  // `after()` registers the turn with the platform instead of an untracked
+  // fire-and-forget promise - a serverless function can be frozen the moment
+  // the response returns, killing a dangling `.catch()` promise mid-flight.
+  after(() => processTurn(channelId).catch(console.error));
   return Response.json({ ok: true });
 }
 ```

@@ -117,12 +117,13 @@ return <StreamFeeds client={client}>{children}</StreamFeeds>;
 Production apps should fetch tokens from a backend route that authenticates the request and derives the Stream `user_id` from the server's own session (cookie, JWT subject, OAuth identity). The client never sends `user_id` to the token endpoint:
 
 ```ts
-// Server-side only
-import { FeedsClient as ServerFeedsClient } from "@stream-io/node-sdk";
+// Server-side only - Feeds operations on the server SDK are namespaced under
+// `client.feeds.*`, same as every other product's Node SDK usage.
+import { StreamClient } from "@stream-io/node-sdk";
 
-const serverClient = new ServerFeedsClient(apiKey, apiSecret);
+const serverClient = new StreamClient(apiKey, apiSecret);
 await serverClient.upsertUsers({ users: { [userId]: { id: userId, name: userName } } });
-const token = serverClient.createToken(userId, /* exp */ undefined, /* iat */ undefined);
+const token = serverClient.generateUserToken({ user_id: userId }); // NOT createToken() - deprecated
 ```
 
 Client `tokenOrProvider` shape:
@@ -211,10 +212,12 @@ Load and watch a feed:
 // Required for real-time updates on regular feeds
 await userFeed.getOrCreate({ watch: true });
 await timeline.getOrCreate({ watch: true });
-// `foryou` is a watchable feed too - its content depends on the
-// activity_selectors configured server-side on the feed group. See
-// "For You feed / Explore" below.
-await forYou.getOrCreate({ watch: true });
+// `foryou` does NOT support `watch` (the popular selector is non-real-time) -
+// load it as a normal read. Its content depends on the activity_selectors
+// configured server-side on the feed group. See "For You feed / Explore"
+// below. Refresh explicitly (re-call getOrCreate()) rather than expecting
+// live updates.
+await forYou.getOrCreate();
 ```
 
 `feed.getOrCreate()` is idempotent. Call it again to refresh the feed state. After a WebSocket reconnect, the SDK automatically re-fetches any feed that was previously loaded with `watch: true`.

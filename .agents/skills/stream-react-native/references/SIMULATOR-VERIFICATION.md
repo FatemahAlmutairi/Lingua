@@ -157,10 +157,12 @@ xcrun simctl launch <udid> <bundleId> --initialUrl "http://localhost:8081"
 hold a stale module-resolution error after the file is fixed, which only a genuine terminate+launch
 clears. You do **not** need another `npx expo run:ios` — the native binary hasn't changed, only JS.
 
-**RN CLI lane — the watchman caveat:** if **`watchman` is not installed**, Metro does **not** detect file
-edits, so **no** reload path surfaces your change — not Fast Refresh, not the packager `GET /reload`, not
-even a cold `simctl launch` (the CLI app reuses its on-disk cached bundle). Symptom: you edit a file,
-relaunch, and the screen is unchanged. Fix with one of:
+**RN CLI lane — the watchman caveat:** without **`watchman`** installed, Metro falls back to a
+Node-based file crawler, so Fast Refresh and reload **can still work** but may be slower or less
+reliable than with Watchman. If an edit doesn't seem to land, check the Metro log and its watcher
+configuration first — confirm the log actually re-bundled after your edit — before assuming reload is
+broken and reaching for a cache reset + relaunch. If it genuinely isn't picking up edits, fix with one
+of:
 
 ```bash
 # Best: install watchman once, then Fast Refresh + relaunch work normally.
