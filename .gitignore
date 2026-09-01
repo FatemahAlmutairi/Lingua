@@ -41,3 +41,9 @@ app-example
 # generated native folders
 /ios
 /android
+
+# vision-agent (Python service)
+vision-agent/.venv/
+vision-agent/__pycache__/
+vision-agent/**/__pycache__/
+!vision-agent/.env.example

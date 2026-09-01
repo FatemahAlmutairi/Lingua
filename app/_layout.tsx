@@ -3,7 +3,9 @@ import "@/global.css";
 import { ClerkProvider, useAuth, useUser } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { useLanguageStore } from "@/store/languageStore";
+import { useStreamVideoSession } from "@/hooks/useStreamVideoSession";
 import { Fonts } from "@/theme";
+import { StreamVideo } from "@stream-io/video-react-native-sdk";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -58,6 +60,17 @@ function PostHogIdentity({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/** Mounts the Stream Video client once the signed-in user's session is ready. */
+function StreamVideoGate({ children }: { children: ReactNode }) {
+  const { client } = useStreamVideoSession();
+
+  if (!client) {
+    return <>{children}</>;
+  }
+
+  return <StreamVideo client={client}>{children}</StreamVideo>;
+}
+
 function RootNavigator() {
   const { isLoaded, isSignedIn } = useAuth();
   const hasHydrated = useLanguageStore((state) => state.hasHydrated);
@@ -99,7 +112,11 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
-  const content = <RootNavigator />;
+  const content = (
+    <StreamVideoGate>
+      <RootNavigator />
+    </StreamVideoGate>
+  );
 
   return (
     <ClerkProvider publishableKey={publishableKey!} tokenCache={tokenCache}>

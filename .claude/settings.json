@@ -57,7 +57,8 @@
       "Bash(git status *)",
       "Bash(ps -o pid,etime,command -p 54073)",
       "Bash(xargs -I{} echo {})",
-      "Bash(npx -y -p playwright node drive.js)"
+      "Bash(npx -y -p playwright node drive.js)",
+      "Bash(curl -s -X POST http://localhost:8081/reload)"
     ]
   },
   "enabledPlugins": {
