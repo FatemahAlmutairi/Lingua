@@ -926,6 +926,11 @@ export const ViewerScreen = ({ callId }: { callId: string }) => {
       .start({ audioRole: "listener", enableStereoAudioOutput: true })
       .then(() => {
         if (mounted) setAudioReady(true);
+      })
+      .catch((err) => {
+        // Leave audioReady false so the player never mounts without a
+        // configured listener audio session.
+        console.error("Failed to start listener audio session", err);
       });
     return () => {
       mounted = false;

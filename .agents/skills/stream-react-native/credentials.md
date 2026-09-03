@@ -152,15 +152,18 @@ After creating demo channels, summarize without secrets and **without printing u
 
 Use `SendMessage` (confirm its body shape with `getstream api SendMessage -h`). Each message's `user_id` must belong to an existing user (so use the namespaced demo users from C1, or the token user). Tag every seeded message with a stable `custom.seed_key` so a re-run can detect and skip already-seeded messages. Don't try to backdate messages.
 
-Before sending, check whether the channel already contains a message with the same `seed_key`. Paginate with the `id_lt` cursor rather than trusting a single page - the seeded set can grow past one page's `messages_limit` across repeated runs, and a match on a later page would otherwise be missed:
+Before sending, check whether the channel already contains a message with the same `seed_key`. Paginate with the `id_lt` cursor rather than trusting a single page - the seeded set can grow past one page's `message_limit` across repeated runs, and a match on a later page would otherwise be missed:
 
 ```bash
-# Skip-if-present check (one query per (channel, seed_key)), paging back with id_lt
-# until the seed_key is found or no messages remain:
-getstream api QueryChannels --request '{"filter_conditions":{"type":"messaging","cid":"messaging:<demo_prefix>general"},"messages_limit":50}'
-# If none of the returned messages match, and the page returned a full messages_limit
-# batch (more may exist), re-query with "id_lt": "<oldest_message_id_from_this_page>"
-# and repeat until a match is found or a page returns fewer than messages_limit.
+# Skip-if-present check (one query per (channel, seed_key)), paging back with the
+# messages.id_lt cursor until the seed_key is found or no messages remain:
+getstream api QueryChannels --request '{"filter_conditions":{"type":"messaging","cid":"messaging:<demo_prefix>general"},"messages":{"limit":50}}'
+# If none of the returned messages match, and the page returned a full messages.limit
+# batch (more may exist), re-query with the same messages object plus
+# "id_lt": "<oldest_message_id_from_this_page>" (the cursor is the oldest message id
+# from THIS page, not the seed message being searched for), e.g.:
+# {"filter_conditions":{...},"messages":{"limit":50,"id_lt":"<oldest_message_id_from_this_page>"}}
+# and repeat until a match is found or a page returns fewer than messages.limit.
 # If the returned messages already include one whose custom.seed_key matches
 # <seed_key>, skip the send for that key.
 ```

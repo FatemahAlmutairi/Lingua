@@ -1,4 +1,4 @@
-import { Colors } from "@/theme";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -23,6 +23,7 @@ type VerificationModalProps = {
 };
 
 export function VerificationModal({ visible, email, onClose, onVerify }: VerificationModalProps) {
+  const colors = useThemeColors();
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(""));
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,13 +81,13 @@ export function VerificationModal({ visible, email, onClose, onVerify }: Verific
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={{ width: "100%" }}
         >
-          <View className="gap-6 rounded-t-3xl bg-white px-6 pb-8 pt-6">
+          <View className="gap-6 rounded-t-3xl bg-surface px-6 pb-8 pt-6">
             <View className="flex-row items-start justify-between">
               <Text className="flex-1 pr-4 text-h3 font-poppins-bold text-text-primary">
                 Verify your email
               </Text>
               <TouchableOpacity onPress={onClose} hitSlop={8}>
-                <Ionicons name="close" size={24} color={Colors.textSecondary} />
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -115,7 +116,7 @@ export function VerificationModal({ visible, email, onClose, onVerify }: Verific
               ))}
             </View>
 
-            {isVerifying && <ActivityIndicator color={Colors.purple} />}
+            {isVerifying && <ActivityIndicator color={colors.purple} />}
 
             {error && (
               <Text className="text-body-sm font-poppins-medium text-error">{error}</Text>

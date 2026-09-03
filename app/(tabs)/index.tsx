@@ -1,11 +1,11 @@
 import { ContinueLearningCard } from "@/components/continue-learning-card";
 import { DailyGoalCard } from "@/components/daily-goal-card";
 import { HomeHeader } from "@/components/home-header";
-import { NextUpCard } from "@/components/next-up-card";
 import { TodayPlanItem } from "@/components/today-plan-item";
 import { images } from "@/constants/images";
 import { getLanguageByCode, languageGreetings, languages } from "@/data/languages";
 import { getNextLesson } from "@/data/lessons";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { useLanguageStore } from "@/store/languageStore";
 import { useLearningStore } from "@/store/learningStore";
 import { Colors } from "@/theme";
@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Home() {
   const { user } = useUser();
+  const colors = useThemeColors();
   const selectedLanguage = useLanguageStore((state) => state.selectedLanguage);
   const completedLessonIds = useLearningStore((state) => state.completedLessonIds);
   const xpToday = useLearningStore((state) => state.xpToday);
@@ -64,7 +65,7 @@ export default function Home() {
   ];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView contentContainerClassName="gap-4 pb-8" showsVerticalScrollIndicator={false}>
         <HomeHeader
           greeting={languageGreetings[languageCode]}
@@ -95,13 +96,6 @@ export default function Home() {
             <TodayPlanItem key={item.id} {...item} />
           ))}
         </View>
-
-        <NextUpCard
-          title="AI Video Call"
-          subtitle="Practice speaking"
-          avatarUri={`https://picsum.photos/seed/${lesson.aiTeacherPrompt.teacherName}/200/200`}
-          onPress={() => router.push("/(tabs)/ai-teacher")}
-        />
       </ScrollView>
     </SafeAreaView>
   );

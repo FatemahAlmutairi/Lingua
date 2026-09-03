@@ -1,7 +1,7 @@
+import { useThemeColors } from "@/hooks/useThemeColors";
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Colors } from "@/theme";
 
 type PlaceholderScreenProps = {
   title: string;
@@ -10,8 +10,10 @@ type PlaceholderScreenProps = {
 };
 
 export function PlaceholderScreen({ title, description, icon }: PlaceholderScreenProps) {
+  const colors = useThemeColors();
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View className="flex-1 items-center justify-center gap-4 px-10">
         <View className="h-20 w-20 items-center justify-center rounded-full bg-surface">{icon}</View>
         <Text className="text-h2 font-poppins-semibold text-text-primary">{title}</Text>

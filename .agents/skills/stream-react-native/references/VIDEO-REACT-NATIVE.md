@@ -208,6 +208,10 @@ export default function ConnectedVideo({ apiKey, user }: { apiKey: string; user:
     // never from a client-supplied user_id param, which would let any
     // signed-in caller mint a token for any user.
     const tokenProvider = async () => {
+      // `credentials: "include"` covers cookie-based session auth. If this
+      // app authenticates with a bearer/OAuth client instead, use the app's
+      // own authenticated http client here, or add the header explicitly:
+      // headers: { Authorization: `Bearer ${accessToken}` }
       const res = await fetch("https://your-api.example.com/stream-token", {
         credentials: "include",
       });

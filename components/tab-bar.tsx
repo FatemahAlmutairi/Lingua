@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { Colors } from "@/theme";
 
 const CIRCLE_SIZE = 52;
@@ -56,6 +57,7 @@ const TAB_CONFIG: Record<string, { label: string; renderIcon: (props: TabIconPro
 };
 
 export function TabBar({ state, navigation }: BottomTabBarProps) {
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const [barWidth, setBarWidth] = useState(0);
   const translateX = useSharedValue(0);
@@ -106,7 +108,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
           >
             <View style={styles.iconWrapper}>
               {config.renderIcon({
-                color: isActive ? "#FFFFFF" : Colors.textSecondary,
+                color: isActive ? "#FFFFFF" : colors.textSecondary,
                 isActive,
               })}
             </View>

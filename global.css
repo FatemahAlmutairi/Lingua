@@ -29,6 +29,9 @@
   --color-peach: #fceee1;
   --color-peach-track: #f5dcc2;
   --color-mint: #eef5e5;
+  --color-gold-tint: #fdf3d8;
+  --color-blue-tint: #e3f2fd;
+  --color-purple-tint: #ede9fe;
 
   /* Font families (loaded via expo-font in app/_layout.tsx) */
   --font-poppins-regular: "Poppins-Regular";
@@ -53,4 +56,29 @@
   --text-body-sm--line-height: 1.6;
   --text-caption: 0.6875rem; /* 11px */
   --text-caption--line-height: 1.4;
+}
+
+/*
+ * Dark mode palette. Brand/status accents (purple, blue, green, streak,
+ * error, warning, info) stay the same across themes — only neutrals and
+ * tinted card backgrounds invert. Mirrors `DarkColors` in theme/colors.ts.
+ * NativeWind resolves this the same way it resolves system dark mode, but
+ * the app drives it manually via `Appearance.setColorScheme` (see
+ * store/themeStore.ts) rather than following the OS setting.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-text-primary: #f4f5fa;
+    --color-text-secondary: #98a0b8;
+    --color-border: #2a3358;
+    --color-surface: #151b33;
+    --color-background: #0b1020;
+
+    --color-peach: #2c2013;
+    --color-peach-track: #4a3620;
+    --color-mint: #16241c;
+    --color-gold-tint: #3a331a;
+    --color-blue-tint: #17233a;
+    --color-purple-tint: #241b4d;
+  }
 }

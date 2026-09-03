@@ -332,9 +332,10 @@ everything today, so only a "Today" separator appears.
 
 ### 3.2 Screenshot every screen, then check it
 
-Screenshot the **channel list**, the **message screen**, and the **thread screen**. Each region's own
-target attributes live in the Step-1 checklist and the per-product region file; on top of those, check
-these — every time:
+Screenshot the **channel list**, the **message screen**, and — only when threads are in scope per the
+[thread scope decision](#common-decision-points) — the **thread screen**, plus the **thread inbox**
+screen if the reference shows that surface. Each region's own target attributes live in the Step-1
+checklist and the per-product region file; on top of those, check these — every time:
 
 **All screens**
 - [ ] **Nav header** — height, title, back affordance (app-owned, not the SDK's).
@@ -348,8 +349,14 @@ these — every time:
 - [ ] Reaction display and attachment/album rendering.
 - [ ] Wallpaper/background, date separator.
 
-**Thread screen**
+**Thread screen** — only when threads are in scope; otherwise **N/A** (verify instead that message rows
+show no thread affordance, per [3.1](#31-seed-data-that-triggers-every-region))
 - [ ] Parent message + reply list render, and the thread's own header/composer match the main screen.
+
+**Thread inbox screen** — only when threads are in scope AND the reference shows this surface;
+otherwise **N/A**
+- [ ] Thread list rows render (parent message preview, reply count, unread state) matching the
+  reference, and selecting a row opens the same thread screen verified above.
 
 **Composer gate — do NOT leave the composer until all pass.** Verify **structure**, not just
 presence/colour:

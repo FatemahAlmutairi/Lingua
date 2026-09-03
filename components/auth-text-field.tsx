@@ -1,4 +1,4 @@
-import { Colors } from "@/theme";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Text, TextInput, TextInputProps, TouchableOpacity, View } from "react-native";
@@ -9,6 +9,7 @@ type AuthTextFieldProps = TextInputProps & {
 };
 
 export function AuthTextField({ label, isPassword, ...inputProps }: AuthTextFieldProps) {
+  const colors = useThemeColors();
   const [isVisible, setIsVisible] = useState(false);
 
   return (
@@ -17,7 +18,7 @@ export function AuthTextField({ label, isPassword, ...inputProps }: AuthTextFiel
       <View className="flex-row items-center">
         <TextInput
           className="flex-1 py-1 text-body-lg font-poppins-regular text-text-primary"
-          placeholderTextColor={Colors.textSecondary}
+          placeholderTextColor={colors.textSecondary}
           secureTextEntry={isPassword && !isVisible}
           {...inputProps}
         />
@@ -26,7 +27,7 @@ export function AuthTextField({ label, isPassword, ...inputProps }: AuthTextFiel
             <Ionicons
               name={isVisible ? "eye-off-outline" : "eye-outline"}
               size={20}
-              color={Colors.textSecondary}
+              color={colors.textSecondary}
             />
           </TouchableOpacity>
         )}

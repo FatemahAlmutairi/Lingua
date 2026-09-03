@@ -3,9 +3,9 @@ import { images } from "@/constants/images";
 import { languages } from "@/data/languages";
 import { getLessonsByUnit, getNextLesson } from "@/data/lessons";
 import { getUnitById, getUnitsByLanguage } from "@/data/units";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { useLanguageStore } from "@/store/languageStore";
 import { useLearningStore } from "@/store/learningStore";
-import { Colors } from "@/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 type LessonsTab = "lessons" | "practice";
 
 export default function Learn() {
+  const colors = useThemeColors();
   const selectedLanguage = useLanguageStore((state) => state.selectedLanguage);
   const completedLessonIds = useLearningStore((state) => state.completedLessonIds);
   const [activeTab, setActiveTab] = useState<LessonsTab>("lessons");
@@ -40,10 +41,10 @@ export default function Learn() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View className="flex-row items-center justify-between px-5 pb-3">
         <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
-          <Ionicons name="chevron-back" size={26} color={Colors.textPrimary} />
+          <Ionicons name="chevron-back" size={26} color={colors.textPrimary} />
         </TouchableOpacity>
 
         <View className="flex-1 items-center px-2">
@@ -55,7 +56,7 @@ export default function Learn() {
           </Text>
         </View>
 
-        <Ionicons name="bookmark-outline" size={24} color={Colors.textPrimary} />
+        <Ionicons name="bookmark-outline" size={24} color={colors.textPrimary} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -122,7 +123,7 @@ export default function Learn() {
             </View>
           ) : (
             <View className="items-center justify-center gap-3 px-10 py-16">
-              <Ionicons name="barbell-outline" size={32} color={Colors.purple} />
+              <Ionicons name="barbell-outline" size={32} color={colors.purple} />
               <Text className="text-h4 font-poppins-semibold text-text-primary">Practice coming soon</Text>
               <Text className="text-center text-body-md font-poppins-regular text-text-secondary">
                 Vocabulary review and quick drills will show up here.

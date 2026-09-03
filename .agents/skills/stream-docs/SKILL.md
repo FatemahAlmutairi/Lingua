@@ -182,12 +182,11 @@ grep -oE '"(stream-chat-react|stream-chat-react-native|stream-chat-expo|stream-c
 Non-npm:
 
 ```bash
-grep -l "stream_chat\|stream_video" pubspec.yaml 2>/dev/null
-grep -l "getstream-go\|GetStream" go.mod 2>/dev/null
-grep -l "getstream" requirements.txt pyproject.toml 2>/dev/null
-grep -l "StreamChat\|StreamVideo" Podfile *.xcodeproj/project.pbxproj 2>/dev/null
-grep -l "io.getstream" build.gradle app/build.gradle 2>/dev/null
-ls *.xcodeproj 2>/dev/null
+grep -HnE "stream_chat_flutter|stream_chat" pubspec.yaml 2>/dev/null
+grep -HnE "getstream-go|GetStream" go.mod 2>/dev/null
+grep -HnE "getstream" requirements.txt pyproject.toml 2>/dev/null
+find . -path ./node_modules -prune -o \( -iname "Podfile" -o -iname "project.pbxproj" \) -print 2>/dev/null | xargs -I{} grep -HnE "StreamChat|StreamVideo" {} 2>/dev/null
+find . -path ./node_modules -prune -o \( -iname "build.gradle" -o -iname "build.gradle.kts" \) -print 2>/dev/null | xargs -I{} grep -HnE "io\.getstream:stream-chat-android|io\.getstream:stream-video-android" {} 2>/dev/null
 ```
 
 Either way, extract the **major version** from semver (e.g. `"stream-chat-react": "^13.2.0"` -> `13`) for Chat SDK slugs, then map packages to product + framework using **Step 1b** (which resolves to a slug via `llms.txt`).

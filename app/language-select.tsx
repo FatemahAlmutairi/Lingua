@@ -1,9 +1,9 @@
 import { LanguageCard } from "@/components/language-card";
 import { images } from "@/constants/images";
 import { languages } from "@/data/languages";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { posthog } from "@/lib/posthog";
 import { useLanguageStore } from "@/store/languageStore";
-import { Colors } from "@/theme";
 import type { LanguageCode } from "@/types/learning";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -22,6 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const EARTH_IMAGE_ASPECT_RATIO = 1127 / 828;
 
 export default function LanguageSelection() {
+  const colors = useThemeColors();
   const storedLanguage = useLanguageStore((state) => state.selectedLanguage);
   const setSelectedLanguage = useLanguageStore((state) => state.setSelectedLanguage);
   const [query, setQuery] = useState("");
@@ -38,10 +39,10 @@ export default function LanguageSelection() {
   });
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View className="flex-row items-center justify-between px-6 pb-4">
         <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
-          <Ionicons name="chevron-back" size={26} color={Colors.textPrimary} />
+          <Ionicons name="chevron-back" size={26} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text className="text-h4 font-poppins-bold text-text-primary">Choose a language</Text>
         <View className="w-6" />
@@ -50,11 +51,11 @@ export default function LanguageSelection() {
       <ScrollView className="flex-1" contentContainerClassName="pb-6" showsVerticalScrollIndicator={false}>
         <View className="px-6">
           <View className="mb-6 flex-row items-center gap-2 rounded-full bg-surface px-4 py-3">
-            <Ionicons name="search" size={18} color={Colors.textSecondary} />
+            <Ionicons name="search" size={18} color={colors.textSecondary} />
             <TextInput
               className="flex-1 text-body-md font-poppins-regular text-text-primary"
               placeholder="Search languages"
-              placeholderTextColor={Colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={query}
               onChangeText={setQuery}
             />

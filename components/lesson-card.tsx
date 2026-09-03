@@ -20,7 +20,7 @@ export function LessonCard({ lesson, status, onPress }: LessonCardProps) {
       onPress={onPress}
       className={
         isInProgress
-          ? "mb-3 flex-row items-center justify-between rounded-2xl border-2 border-purple bg-[#EDE9FE] px-4 py-3.5"
+          ? "mb-3 flex-row items-center justify-between rounded-2xl border-2 border-purple bg-purple-tint px-4 py-3.5"
           : "mb-3 flex-row items-center justify-between rounded-2xl border border-border bg-background px-4 py-3.5"
       }
     >

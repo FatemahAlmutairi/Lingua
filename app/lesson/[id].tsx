@@ -1,6 +1,8 @@
 import { images } from "@/constants/images";
 import { getLanguageByCode } from "@/data/languages";
 import { getLessonById } from "@/data/lessons";
+import { useLessonCaptions, type LiveCaption } from "@/hooks/useLessonCaptions";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import {
   AI_TEACHER_USER_ID,
   fetchLessonCall,
@@ -27,6 +29,7 @@ import {
   ActivityIndicator,
   Image,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -40,34 +43,6 @@ type CallPhase = "connecting" | "reconnecting" | "joined" | "error" | "ended";
 /** Connection status of the AI teacher's own agent session, tracked separately from the
  * student's call phase above — the two connect independently. */
 type AgentStatus = "idle" | "connecting" | "connected" | "failed";
-
-type ControlButtonProps = {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  active: boolean;
-  disabled?: boolean;
-  onPress: () => void;
-};
-
-function ControlButton({ icon, label, active, disabled, onPress }: ControlButtonProps) {
-  return (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={onPress}
-      disabled={disabled}
-      className="items-center gap-1.5"
-      style={disabled ? { opacity: 0.4 } : undefined}
-    >
-      <View
-        style={styles.card}
-        className={active ? "h-14 w-14 items-center justify-center rounded-full bg-white" : "h-14 w-14 items-center justify-center rounded-full bg-surface"}
-      >
-        <Ionicons name={icon} size={22} color={active ? Colors.textPrimary : Colors.textSecondary} />
-      </View>
-      <Text className="text-body-sm font-poppins-medium text-text-primary">{label}</Text>
-    </TouchableOpacity>
-  );
-}
 
 const STATUS_COPY: Record<CallPhase, { label: string; color: string }> = {
   connecting: { label: "Connecting…", color: Colors.warning },
@@ -94,12 +69,12 @@ type AudioLessonViewProps = {
   onRetry: () => void;
   agentStatus: AgentStatus;
   onRetryAgent: () => void;
+  captions: LiveCaption[];
   micOn: boolean;
-  onToggleMic: () => void;
-  cameraOn: boolean;
-  onToggleCamera: () => void;
-  subtitlesOn: boolean;
-  onToggleSubtitles: () => void;
+  micUnavailable: boolean;
+  onMicPressIn: () => void;
+  onMicPressOut: () => void;
+  onRetryMic: () => void;
   onBack: () => void;
   onEndCall: () => void;
   timerLabel: string;
@@ -115,30 +90,35 @@ function AudioLessonView({
   onRetry,
   agentStatus,
   onRetryAgent,
+  captions,
   micOn,
-  onToggleMic,
-  cameraOn,
-  onToggleCamera,
-  subtitlesOn,
-  onToggleSubtitles,
+  micUnavailable,
+  onMicPressIn,
+  onMicPressOut,
+  onRetryMic,
   onBack,
   onEndCall,
   timerLabel,
 }: AudioLessonViewProps) {
+  const colors = useThemeColors();
   const language = getLanguageByCode(lesson.languageCode);
   const primaryGoal = lesson.goals[0];
   const primaryPhrase = lesson.phrases[0];
-  const controlsEnabled = phase === "joined";
+  // The mic only goes live once the student's call has joined AND the AI teacher itself is
+  // connected — holding it earlier would just capture audio nobody's listening for yet.
+  // A failed mic preparation (e.g. permission denied) blocks it too, since push-to-talk
+  // would otherwise silently capture nothing.
+  const micReady = phase === "joined" && agentStatus === "connected" && !micUnavailable;
   const status = STATUS_COPY[phase];
   // Once the student's own call is joined, the status row switches from reporting the call
   // connection to reporting the AI teacher's — that's the more useful signal at that point.
   const headerStatus = phase === "joined" ? (AGENT_STATUS_COPY[agentStatus] ?? status) : status;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View className="flex-row items-center justify-between px-5 pb-3 pt-1">
         <TouchableOpacity onPress={onBack} hitSlop={8}>
-          <Ionicons name="chevron-back" size={26} color={Colors.textPrimary} />
+          <Ionicons name="chevron-back" size={26} color={colors.textPrimary} />
         </TouchableOpacity>
 
         <View className="flex-1 px-3">
@@ -155,14 +135,20 @@ function AudioLessonView({
 
         <View className="flex-row items-center gap-2">
           <View className="h-9 w-9 items-center justify-center rounded-full bg-surface">
-            <Ionicons name="videocam-outline" size={18} color={Colors.textPrimary} />
-          </View>
-          <View className="h-9 w-9 items-center justify-center rounded-full bg-surface">
             <Text className="text-body-sm font-poppins-semibold text-text-primary">{timerLabel}</Text>
           </View>
           <View className="h-9 w-9 items-center justify-center rounded-full bg-surface">
-            <Ionicons name="notifications-outline" size={18} color={Colors.textPrimary} />
+            <Ionicons name="notifications-outline" size={18} color={colors.textPrimary} />
           </View>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={onEndCall}
+            disabled={phase === "ended"}
+            style={styles.card}
+            className="h-9 w-9 items-center justify-center rounded-full bg-error"
+          >
+            <MaterialCommunityIcons name="phone-hangup" size={18} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -182,7 +168,7 @@ function AudioLessonView({
 
         {primaryGoal && (
           <View className="flex-row items-center gap-1.5">
-            <Ionicons name="checkmark-circle-outline" size={14} color={Colors.textSecondary} />
+            <Ionicons name="checkmark-circle-outline" size={14} color={colors.textSecondary} />
             <Text className="flex-1 text-body-sm font-poppins-regular text-text-secondary" numberOfLines={1}>
               {primaryGoal.description}
             </Text>
@@ -205,38 +191,36 @@ function AudioLessonView({
         )}
       </View>
 
-      <View className="flex-1 items-center justify-center bg-[#F1ECFF]">
-        {cameraOn && (
-          <View style={styles.card} className="absolute right-4 top-4 items-end gap-1">
-            <View className="h-16 w-16 overflow-hidden rounded-2xl border-2 border-white">
-              {userImageUrl ? (
-                <Image source={{ uri: userImageUrl }} className="h-full w-full" resizeMode="cover" />
-              ) : (
-                <View className="h-full w-full items-center justify-center bg-surface">
-                  <Ionicons name="person" size={22} color={Colors.textSecondary} />
-                </View>
-              )}
-              {!micOn && (
-                <View className="absolute bottom-1 right-1 h-5 w-5 items-center justify-center rounded-full bg-error">
-                  <Ionicons name="mic-off" size={11} color="#FFFFFF" />
-                </View>
-              )}
-            </View>
-            <Text className="text-caption font-poppins-medium text-text-secondary">
-              {userFirstName ?? "You"}
-            </Text>
+      <View className="flex-1 items-center justify-center bg-purple-tint">
+        <View style={styles.card} className="absolute right-4 top-4 items-end gap-1">
+          <View className="h-16 w-16 overflow-hidden rounded-2xl border-2 border-white">
+            {userImageUrl ? (
+              <Image source={{ uri: userImageUrl }} className="h-full w-full" resizeMode="cover" />
+            ) : (
+              <View className="h-full w-full items-center justify-center bg-surface">
+                <Ionicons name="person" size={22} color={colors.textSecondary} />
+              </View>
+            )}
+            {!micOn && (
+              <View className="absolute bottom-1 right-1 h-5 w-5 items-center justify-center rounded-full bg-error">
+                <Ionicons name="mic-off" size={11} color="#FFFFFF" />
+              </View>
+            )}
           </View>
-        )}
+          <Text className="text-caption font-poppins-medium text-text-secondary">
+            {userFirstName ?? "You"}
+          </Text>
+        </View>
 
         {phase === "connecting" || phase === "reconnecting" ? (
           // 1. Call connecting — waiting on the student's own Stream call to join.
           <View className="items-center gap-3">
-            <ActivityIndicator size="large" color={Colors.purple} />
+            <ActivityIndicator size="large" color={colors.purple} />
             <Text className="text-body-md font-poppins-medium text-text-secondary">{status.label}</Text>
           </View>
         ) : phase === "error" ? (
           <View className="items-center gap-3 px-8">
-            <Ionicons name="cloud-offline-outline" size={36} color={Colors.error} />
+            <Ionicons name="cloud-offline-outline" size={36} color={colors.error} />
             <Text className="text-center text-body-md font-poppins-medium text-text-secondary">
               {errorMessage ?? "Couldn't connect to this lesson."}
             </Text>
@@ -251,7 +235,7 @@ function AudioLessonView({
         ) : agentStatus === "connecting" || agentStatus === "idle" ? (
           // 2. Call is joined, but the AI teacher hasn't connected yet.
           <View className="items-center gap-3">
-            <ActivityIndicator size="large" color={Colors.purple} />
+            <ActivityIndicator size="large" color={colors.purple} />
             <Text className="text-body-md font-poppins-medium text-text-secondary">
               AI teacher connecting…
             </Text>
@@ -260,7 +244,7 @@ function AudioLessonView({
           // 4. The agent session couldn't be started — non-blocking, the student can retry
           // just the agent without leaving the call.
           <View className="items-center gap-3 px-8">
-            <Ionicons name="alert-circle-outline" size={36} color={Colors.error} />
+            <Ionicons name="alert-circle-outline" size={36} color={colors.error} />
             <Text className="text-center text-body-md font-poppins-medium text-text-secondary">
               The AI teacher couldn&apos;t join this lesson.
             </Text>
@@ -277,59 +261,110 @@ function AudioLessonView({
           <>
             <Image source={images.mascotWelcome} className="h-[220px] w-[220px]" resizeMode="contain" />
 
-            {primaryPhrase && (
-              <View
-                style={styles.card}
-                className="absolute bottom-5 left-5 right-5 rounded-2xl bg-white px-4 py-3"
-              >
-                <View style={styles.bubbleTail} />
-                <View className="flex-row items-start justify-between gap-3">
-                  <View className="flex-1 gap-0.5">
-                    <Text className="text-body-lg font-poppins-semibold text-text-primary">
-                      {primaryPhrase.phrase}
-                    </Text>
-                    {subtitlesOn && (
+            {captions.length > 0 ? (
+              <View className="absolute bottom-5 left-5 right-5 gap-2">
+                {captions.map((caption) => {
+                  const fromTeacher = caption.speakerId === AI_TEACHER_USER_ID;
+                  return (
+                    <View
+                      key={caption.id}
+                      style={styles.card}
+                      className={
+                        fromTeacher
+                          ? "gap-0.5 rounded-2xl bg-purple px-4 py-3"
+                          : "gap-0.5 rounded-2xl bg-white px-4 py-3"
+                      }
+                    >
+                      <Text
+                        className={
+                          fromTeacher
+                            ? "text-caption font-poppins-semibold text-white/70"
+                            : "text-caption font-poppins-semibold text-text-secondary"
+                        }
+                      >
+                        {fromTeacher ? "AI Teacher" : (userFirstName ?? "You")}
+                      </Text>
+                      <Text
+                        className={
+                          fromTeacher
+                            ? "text-body-md font-poppins-medium text-white"
+                            : "text-body-md font-poppins-medium text-text-primary"
+                        }
+                      >
+                        {caption.text}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              primaryPhrase && (
+                <View
+                  style={styles.card}
+                  className="absolute bottom-5 left-5 right-5 rounded-2xl bg-white px-4 py-3"
+                >
+                  <View style={styles.bubbleTail} />
+                  <View className="flex-row items-start justify-between gap-3">
+                    <View className="flex-1 gap-0.5">
+                      <Text className="text-body-lg font-poppins-semibold text-text-primary">
+                        {primaryPhrase.phrase}
+                      </Text>
                       <Text className="text-body-md font-poppins-regular text-text-secondary">
                         {primaryPhrase.translation}
                       </Text>
-                    )}
+                    </View>
+                    <Ionicons name="volume-high-outline" size={20} color={colors.purple} />
                   </View>
-                  <Ionicons name="volume-high-outline" size={20} color={Colors.purple} />
                 </View>
-              </View>
+              )
             )}
           </>
         )}
       </View>
 
-      <View className="flex-row items-center justify-between px-8 pb-5 pt-4">
-        <ControlButton
-          icon={cameraOn ? "videocam" : "videocam-off"}
-          label="Camera"
-          active={cameraOn}
-          onPress={onToggleCamera}
-        />
-        <ControlButton
-          icon={micOn ? "mic" : "mic-off"}
-          label="Mic"
-          active={micOn}
-          disabled={!controlsEnabled}
-          onPress={onToggleMic}
-        />
-        <ControlButton
-          icon="language"
-          label="Subtitles"
-          active={subtitlesOn}
-          onPress={onToggleSubtitles}
-        />
-        <TouchableOpacity activeOpacity={0.8} onPress={onEndCall} className="items-center gap-1.5">
-          <View style={styles.card} className="h-14 w-14 items-center justify-center rounded-full bg-error">
-            <MaterialCommunityIcons name="phone-hangup" size={24} color="#FFFFFF" />
-          </View>
-          <Text className="text-body-sm font-poppins-medium text-text-primary">
-            {phase === "ended" ? "Ending…" : "End Call"}
-          </Text>
-        </TouchableOpacity>
+      <View className="items-center gap-2 pb-5 pt-4">
+        <View className="h-28 w-28 items-center justify-center">
+          {micOn && (
+            <View pointerEvents="none" className="absolute h-28 w-28 rounded-full bg-purple/15" />
+          )}
+          <Pressable
+            onPressIn={micUnavailable ? undefined : onMicPressIn}
+            onPressOut={micUnavailable ? undefined : onMicPressOut}
+            onPress={micUnavailable ? onRetryMic : undefined}
+            disabled={!micReady && !micUnavailable}
+            style={({ pressed }) => [styles.card, { opacity: pressed && (micReady || micUnavailable) ? 0.9 : 1 }]}
+            className={
+              micOn
+                ? "h-20 w-20 items-center justify-center rounded-full bg-purple"
+                : micReady
+                  ? "h-20 w-20 items-center justify-center rounded-full border border-border bg-white"
+                  : "h-20 w-20 items-center justify-center rounded-full border border-border bg-surface"
+            }
+          >
+            {micUnavailable ? (
+              <Ionicons name="mic-off" size={32} color={colors.error} />
+            ) : !micReady ? (
+              <ActivityIndicator size="small" color={colors.textSecondary} />
+            ) : (
+              <Ionicons
+                name={micOn ? "mic" : "mic-outline"}
+                size={32}
+                color={micOn ? "#FFFFFF" : colors.textSecondary}
+              />
+            )}
+          </Pressable>
+        </View>
+        <Text className="text-body-sm font-poppins-medium text-text-secondary">
+          {micUnavailable
+            ? "Microphone unavailable. Tap to retry."
+            : !micReady
+            ? agentStatus === "failed"
+              ? "AI teacher unavailable"
+              : "Connecting…"
+            : micOn
+              ? "Listening…"
+              : "Push & hold to speak"}
+        </Text>
       </View>
 
       <View style={styles.card} className="mx-5 mb-5 flex-row rounded-2xl bg-white px-4 py-4">
@@ -359,6 +394,9 @@ type ConnectedAudioLessonProps = {
   agentStatus: AgentStatus;
   onAgentConnected: () => void;
   onRetryAgent: () => void;
+  captions: LiveCaption[];
+  micUnavailable: boolean;
+  onRetryMic: () => void;
 };
 
 /** Rendered inside <StreamCall> once the call exists — owns live call state and controls. */
@@ -371,6 +409,9 @@ function ConnectedAudioLesson({
   agentStatus,
   onAgentConnected,
   onRetryAgent,
+  captions,
+  micUnavailable,
+  onRetryMic,
 }: ConnectedAudioLessonProps) {
   const call = useCall();
   const { useCallCallingState, useMicrophoneState, useRemoteParticipants } = useCallStateHooks();
@@ -378,8 +419,6 @@ function ConnectedAudioLesson({
   const { status: micStatus } = useMicrophoneState();
   const remoteParticipants = useRemoteParticipants();
 
-  const [cameraOn, setCameraOn] = useState(true);
-  const [subtitlesOn, setSubtitlesOn] = useState(true);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [ending, setEnding] = useState(false);
 
@@ -407,11 +446,31 @@ function ConnectedAudioLesson({
         ? "reconnecting"
         : "connecting";
 
-  async function toggleMic() {
+  // Muting the AI teacher's incoming audio track (rather than just the student's own mic)
+  // is what actually kills the echo: without it, the teacher's voice comes out of the phone
+  // speaker and straight back into the mic while the student is holding the button to talk.
+  function setAgentAudioMuted(muted: boolean) {
+    const agent = remoteParticipants.find((p) => p.userId === AI_TEACHER_USER_ID);
+    agent?.audioStream?.getAudioTracks().forEach((track) => {
+      track.enabled = !muted;
+    });
+  }
+
+  async function startTalking() {
+    setAgentAudioMuted(true);
     try {
-      await call?.microphone.toggle();
+      await call?.microphone.enable();
     } catch (err) {
-      console.error("Failed to toggle microphone", err);
+      console.error("Failed to enable microphone", err);
+    }
+  }
+
+  async function stopTalking() {
+    setAgentAudioMuted(false);
+    try {
+      await call?.microphone.disable();
+    } catch (err) {
+      console.error("Failed to disable microphone", err);
     }
   }
 
@@ -457,12 +516,12 @@ function ConnectedAudioLesson({
       onRetry={() => {}}
       agentStatus={agentStatus}
       onRetryAgent={onRetryAgent}
+      captions={captions}
       micOn={micStatus === "enabled"}
-      onToggleMic={toggleMic}
-      cameraOn={cameraOn}
-      onToggleCamera={() => setCameraOn((value) => !value)}
-      subtitlesOn={subtitlesOn}
-      onToggleSubtitles={() => setSubtitlesOn((value) => !value)}
+      micUnavailable={micUnavailable}
+      onMicPressIn={startTalking}
+      onMicPressOut={stopTalking}
+      onRetryMic={onRetryMic}
       onBack={handleBack}
       onEndCall={handleEndCall}
       timerLabel={timerLabel}
@@ -471,6 +530,7 @@ function ConnectedAudioLesson({
 }
 
 export default function AudioLessonScreen() {
+  const colors = useThemeColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const lesson = getLessonById(id);
   const { user } = useUser();
@@ -486,6 +546,8 @@ export default function AudioLessonScreen() {
   const [retryToken, setRetryToken] = useState(0);
   const [agentStatus, setAgentStatus] = useState<AgentStatus>("idle");
   const [agentRetryToken, setAgentRetryToken] = useState(0);
+  const [micUnavailable, setMicUnavailable] = useState(false);
+  const captions = useLessonCaptions(call);
 
   // Joins the student's own Stream call. The AI teacher's session is started by a separate
   // effect below, once this one packs the lesson context into the call and hands it off —
@@ -496,6 +558,7 @@ export default function AudioLessonScreen() {
     let cancelled = false;
     let activeCall: Call | undefined;
     setConnectError(undefined);
+    setMicUnavailable(false);
     setCall(undefined);
 
     (async () => {
@@ -510,7 +573,20 @@ export default function AudioLessonScreen() {
 
         // Audio-only: make sure no camera track ever publishes, regardless of call-type defaults.
         await c.camera.disable().catch(() => {});
-        await c.microphone.enable().catch(() => {});
+        try {
+          // Push-to-talk: request mic permission and publish once up front (so the OS
+          // permission prompt happens now, not mid-gesture on the student's first hold),
+          // then immediately mute — the mic only goes live while the button is held.
+          await c.microphone.enable();
+          await c.microphone.disable();
+        } catch (err) {
+          // Not caught silently — if this fails (e.g. permission denied), the student's
+          // audio never reaches the AI teacher, which then waits forever with nothing to
+          // react to. Recorded as micUnavailable so push-to-talk stays disabled (rather
+          // than reading as merely "still connecting" forever) until the student retries.
+          console.error("Failed to prepare microphone", err);
+          if (!cancelled) setMicUnavailable(true);
+        }
 
         // Pack the full lesson context into the call's custom data so the AI teacher (joining
         // separately, server-side) can read it on join — the app already has this lesson data
@@ -594,11 +670,24 @@ export default function AudioLessonScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [call, agentRetryToken]);
 
+  /** Re-attempts the same enable-then-mute prep that runs on join, without rejoining the call. */
+  async function retryMicPreparation() {
+    if (!call) return;
+    try {
+      await call.microphone.enable();
+      await call.microphone.disable();
+      setMicUnavailable(false);
+    } catch (err) {
+      console.error("Failed to prepare microphone", err);
+      setMicUnavailable(true);
+    }
+  }
+
   if (!lesson) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <View className="flex-1 items-center justify-center gap-4 px-8">
-          <Ionicons name="alert-circle-outline" size={40} color={Colors.textSecondary} />
+          <Ionicons name="alert-circle-outline" size={40} color={colors.textSecondary} />
           <Text className="text-body-lg font-poppins-semibold text-text-primary">
             Lesson not found
           </Text>
@@ -629,6 +718,9 @@ export default function AudioLessonScreen() {
           agentStatus={agentStatus}
           onAgentConnected={() => setAgentStatus("connected")}
           onRetryAgent={() => setAgentRetryToken((n) => n + 1)}
+          captions={captions}
+          micUnavailable={micUnavailable}
+          onRetryMic={retryMicPreparation}
         />
       </StreamCall>
     );
@@ -644,12 +736,12 @@ export default function AudioLessonScreen() {
       onRetry={() => setRetryToken((n) => n + 1)}
       agentStatus={agentStatus}
       onRetryAgent={() => {}}
+      captions={[]}
       micOn={false}
-      onToggleMic={() => {}}
-      cameraOn={true}
-      onToggleCamera={() => {}}
-      subtitlesOn
-      onToggleSubtitles={() => {}}
+      micUnavailable={false}
+      onMicPressIn={() => {}}
+      onMicPressOut={() => {}}
+      onRetryMic={() => {}}
       onBack={() => router.back()}
       onEndCall={() => router.back()}
       timerLabel="0"

@@ -1,3 +1,4 @@
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { Colors } from "@/theme";
 import type { Language } from "@/types/learning";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,6 +13,8 @@ type HomeHeaderProps = {
 };
 
 export function HomeHeader({ greeting, firstName, language, streak, onPressNotifications }: HomeHeaderProps) {
+  const colors = useThemeColors();
+
   return (
     <View className="flex-row items-center justify-between px-5 pt-3">
       <View className="flex-row items-center gap-2.5">
@@ -30,7 +33,7 @@ export function HomeHeader({ greeting, firstName, language, streak, onPressNotif
           <Text className="text-h4 font-poppins-bold text-streak">{streak}</Text>
         </View>
         <TouchableOpacity onPress={onPressNotifications} hitSlop={8}>
-          <Ionicons name="notifications-outline" size={24} color={Colors.textPrimary} />
+          <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
     </View>

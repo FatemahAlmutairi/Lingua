@@ -515,7 +515,7 @@ Wiring:
 Posts a text activity to the current user's `user` feed. Read the feed from `<StreamFeed>` context.
 
 ```tsx
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   Platform,
   Pressable,
@@ -526,18 +526,34 @@ import {
 } from "react-native";
 import { useFeedContext } from "@stream-io/feeds-react-native-sdk";
 
+// One id per logical draft, reused across retries of that SAME draft so a
+// dropped response (request actually succeeded server-side, client never saw
+// it) can't turn a retry into a duplicate activity.
+const generateActivityId = () =>
+  globalThis.crypto?.randomUUID?.() ?? `activity-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
 export const ActivityComposer = () => {
   const feed = useFeedContext();
   const [draft, setDraft] = useState("");
   const [isPosting, setIsPosting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const canPost = draft.trim().length > 0 && !isPosting;
+  const pendingIdRef = useRef<string>();
 
   const post = useCallback(async () => {
     if (!feed || !canPost) return;
     setIsPosting(true);
+    setError(null);
+    if (!pendingIdRef.current) pendingIdRef.current = generateActivityId();
     try {
-      await feed.addActivity({ text: draft, type: "post" });
+      await feed.addActivity({ id: pendingIdRef.current, text: draft, type: "post" });
+      pendingIdRef.current = undefined;
       setDraft("");
+    } catch (err) {
+      // Draft AND the pending id are preserved (not cleared) so a retry reuses
+      // the same id instead of risking a duplicate post.
+      console.error("Failed to post activity", err);
+      setError("Couldn't post. Tap Post to retry.");
     } finally {
       setIsPosting(false);
     }
@@ -554,6 +570,7 @@ export const ActivityComposer = () => {
         textAlignVertical="top"
         value={draft}
       />
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
       <View style={styles.footerRow}>
         <Pressable
           disabled={!canPost}
@@ -606,6 +623,7 @@ const styles = StyleSheet.create({
   buttonDisabled: { backgroundColor: "#93C5FD" },
   buttonPressed: { opacity: 0.8 },
   buttonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "600" },
+  errorText: { color: "#DC2626", fontSize: 12, marginTop: 6 },
 });
 ```
 
@@ -636,6 +654,7 @@ Wiring:
 - The composer posts to `ownFeed` (user feed); the list reads `ownTimeline`. Self-follow makes own posts appear on the timeline automatically.
 - This blueprint is text-only. To attach an image or file, use the **Activity Composer with Image** blueprint below.
 - Disable the post button while `canPost === false` so the user cannot submit empty content.
+- `pendingIdRef` holds one id per logical draft: it is generated on the first submit attempt, reused on every retry of that same draft, and cleared only after a successful `addActivity` call. If a screen lets the user discard a failed draft and start a different one (e.g. a "clear" action), clear `pendingIdRef.current` there too so the abandoned draft's id is never accidentally reused for unrelated content.
 
 ---
 
@@ -1261,7 +1280,7 @@ const styles = StyleSheet.create({
 Note: `CommentComposer` is a leaf component. The parent modal screen is responsible for keyboard avoidance (see `app/comments-modal.tsx` above) - do NOT wrap this component in a `KeyboardAvoidingView`. KAV inside a `presentation: "modal"` sheet mixes parent-relative and screen-relative coordinates and produces drift that varies by device, header style, and sheet style; the modal-root `Keyboard.addListener` + `paddingBottom` pattern is the cross-platform fix.
 
 ```tsx
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   Platform,
   Pressable,
@@ -1275,24 +1294,40 @@ import {
   useFeedsClient,
 } from "@stream-io/feeds-react-native-sdk";
 
+// Same reasoning as ActivityComposer's generateActivityId: one id per logical
+// draft, reused across retries so a dropped response can't create a duplicate.
+const generateCommentId = () =>
+  globalThis.crypto?.randomUUID?.() ?? `comment-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
 type CommentComposerProps = { activity: ActivityWithStateUpdates };
 
 export const CommentComposer = ({ activity }: CommentComposerProps) => {
   const client = useFeedsClient();
   const [draft, setDraft] = useState("");
   const [isPosting, setIsPosting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const canReply = draft.trim().length > 0 && !isPosting;
+  const pendingIdRef = useRef<string>();
 
   const submit = useCallback(async () => {
     if (!client || !canReply) return;
     setIsPosting(true);
+    setError(null);
+    if (!pendingIdRef.current) pendingIdRef.current = generateCommentId();
     try {
       await client.addComment({
+        id: pendingIdRef.current,
         object_id: activity.id,
         object_type: "activity",
         comment: draft,
       });
+      pendingIdRef.current = undefined;
       setDraft("");
+    } catch (err) {
+      // Draft AND the pending id are preserved (not cleared) so a retry
+      // reuses the same id instead of risking a duplicate reply.
+      console.error("Failed to post comment", err);
+      setError("Couldn't post reply. Tap Reply to retry.");
     } finally {
       setIsPosting(false);
     }
@@ -1300,37 +1335,44 @@ export const CommentComposer = ({ activity }: CommentComposerProps) => {
 
   return (
     <View style={styles.container}>
-      <TextInput
-        onChangeText={setDraft}
-        onSubmitEditing={submit}
-        placeholder="Post your reply"
-        placeholderTextColor="#9CA3AF"
-        returnKeyType="send"
-        style={styles.input}
-        value={draft}
-      />
-      <Pressable
-        disabled={!canReply}
-        onPress={submit}
-        style={({ pressed }) => [
-          styles.button,
-          !canReply && styles.buttonDisabled,
-          pressed && canReply && styles.buttonPressed,
-        ]}
-      >
-        <Text style={styles.buttonText}>Reply</Text>
-      </Pressable>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      <View style={styles.row}>
+        <TextInput
+          onChangeText={setDraft}
+          onSubmitEditing={submit}
+          placeholder="Post your reply"
+          placeholderTextColor="#9CA3AF"
+          returnKeyType="send"
+          style={styles.input}
+          value={draft}
+        />
+        <Pressable
+          disabled={!canReply}
+          onPress={submit}
+          style={({ pressed }) => [
+            styles.button,
+            !canReply && styles.buttonDisabled,
+            pressed && canReply && styles.buttonPressed,
+          ]}
+        >
+          <Text style={styles.buttonText}>Reply</Text>
+        </Pressable>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    marginTop: 8,
+    paddingHorizontal: 12,
+    width: "100%",
+  },
+  errorText: { color: "#DC2626", fontSize: 12, marginBottom: 4 },
+  row: {
     alignItems: "center",
     flexDirection: "row",
     gap: 8,
-    marginTop: 8,
-    paddingHorizontal: 12,
     width: "100%",
   },
   input: {
@@ -1485,13 +1527,31 @@ const PROVIDER_NAME_ANDROID = "your-firebase-provider";
 // of a registration that's still in flight.
 export const usePushRegistration = () => {
   const client = useFeedsClient();
-  const registrationRef = useRef<Promise<string | undefined> | null>(null);
+  // A Set (not a single ref) so a token rotation that fires before the initial
+  // registration resolves doesn't overwrite it - every in-flight and completed
+  // registration is tracked until unregister() cleans each one up individually.
+  const registrationsRef = useRef<Set<Promise<string | undefined>>>(new Set());
+  const tokenSubRef = useRef<{ remove: () => void } | null>(null);
 
   useEffect(() => {
     if (!client || !Device.isDevice) {
-      registrationRef.current = null;
       return;
     }
+
+    const registerToken = async (token: string): Promise<string> => {
+      await client.createDevice({
+        id: token,
+        push_provider: Platform.OS === "ios" ? "apn" : "firebase",
+        push_provider_name:
+          Platform.OS === "ios" ? PROVIDER_NAME_IOS : PROVIDER_NAME_ANDROID,
+      });
+      return token;
+    };
+
+    const track = (promise: Promise<string | undefined>) => {
+      registrationsRef.current.add(promise);
+      promise.finally(() => registrationsRef.current.delete(promise));
+    };
 
     const register = async (): Promise<string | undefined> => {
       const existing = await Notifications.getPermissionsAsync();
@@ -1503,28 +1563,53 @@ export const usePushRegistration = () => {
 
       // Native APNs / FCM device token (NOT the Expo push token).
       const devicePushToken = await Notifications.getDevicePushTokenAsync();
-      const token = devicePushToken.data;
-
-      await client.createDevice({
-        id: token,
-        push_provider: Platform.OS === "ios" ? "apn" : "firebase",
-        push_provider_name:
-          Platform.OS === "ios" ? PROVIDER_NAME_IOS : PROVIDER_NAME_ANDROID,
-      });
-      return token;
+      return registerToken(devicePushToken.data);
     };
 
-    registrationRef.current = register().catch((err) => {
-      console.error("Push registration failed", err);
-      return undefined;
+    track(
+      register().catch((err) => {
+        console.error("Push registration failed", err);
+        return undefined;
+      }),
+    );
+
+    // The native token can rotate after initial registration - re-register
+    // with Stream whenever that happens so push delivery doesn't go stale.
+    // Tracked alongside (not instead of) the initial registration so both
+    // tokens get cleaned up on sign-out, regardless of completion order.
+    tokenSubRef.current = Notifications.addPushTokenListener((newToken) => {
+      track(
+        registerToken(newToken.data).catch((err) => {
+          console.error("Push token rotation registration failed", err);
+          return undefined;
+        }),
+      );
     });
+
+    return () => {
+      tokenSubRef.current?.remove();
+      tokenSubRef.current = null;
+    };
   }, [client]);
 
   const unregister = async () => {
-    const token = await registrationRef.current?.catch(() => undefined);
-    registrationRef.current = null;
-    if (client && token) {
-      await client.deleteDevice({ id: token }).catch((err) => console.error(err));
+    // Stop listening for new rotations first so nothing new starts registering
+    // once cleanup begins.
+    tokenSubRef.current?.remove();
+    tokenSubRef.current = null;
+
+    const pending = Array.from(registrationsRef.current);
+    registrationsRef.current.clear();
+    const tokens = (
+      await Promise.all(pending.map((registration) => registration.catch(() => undefined)))
+    ).filter((token): token is string => !!token);
+
+    if (client) {
+      // Let deleteDevice failures propagate so the caller (sign-out) knows
+      // the device(s) weren't actually removed, instead of silently
+      // swallowing it. Every token that reached the server gets a delete
+      // call, not just the most recent one.
+      await Promise.all(tokens.map((id) => client.deleteDevice({ id })));
     }
   };
 
@@ -1564,14 +1649,23 @@ Cleanly disconnect the user before connecting another. Clearing the session (the
 import React, { useCallback } from "react";
 import { Button } from "react-native";
 import { useFeedsClient } from "@stream-io/feeds-react-native-sdk";
+import { usePushRegistration } from "@/hooks/usePushRegistration"; // see Push Device Registration
 
 export const SignOutButton = ({ onSignedOut }: { onSignedOut: () => void }) => {
   const client = useFeedsClient();
+  const { unregister } = usePushRegistration();
 
   const signOut = useCallback(async () => {
+    // Await device removal before disconnecting so it completes even if
+    // sign-out happens while registration is still in flight. A failed
+    // unregister is NOT swallowed here - it propagates so disconnectUser()
+    // and onSignedOut() don't run as though device cleanup actually
+    // succeeded, which would leave a stale device registered against this
+    // user after the next person signs in on the same device.
+    await unregister();
     if (client) await client.disconnectUser();
     onSignedOut();
-  }, [client, onSignedOut]);
+  }, [client, onSignedOut, unregister]);
 
   return <Button onPress={signOut} title="Sign out" />;
 };
@@ -1581,5 +1675,5 @@ Wiring:
 
 - `client.disconnectUser()` releases the WebSocket and clears the connected user.
 - Call `activity.dispose()` (where applicable) on any open `activityWithStateUpdates` handles before signing out, or rely on screen unmount to dispose them.
-- If push is wired, `await unregister()` from `usePushRegistration()` (see Push Device Registration) before `client.disconnectUser()`, so device removal completes - including when sign-out happens before registration finished - and the next user on the device does not inherit these pushes.
+- If push is wired, `await unregister()` from `usePushRegistration()` (see Push Device Registration) before `client.disconnectUser()`, so device removal completes - including when sign-out happens before registration finished - and the next user on the device does not inherit these pushes. A failed `unregister()` now rejects `signOut()` instead of being swallowed, so the surrounding UI should catch it (e.g. wrap the `onPress` handler or add a try/catch around `signOut()`) and offer retry, rather than leaving the button's rejection unhandled.
 - Do not print user tokens in final summaries or logs.

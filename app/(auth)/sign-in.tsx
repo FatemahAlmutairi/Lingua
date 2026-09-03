@@ -2,9 +2,9 @@ import { AuthMascot } from "@/components/auth-mascot";
 import { AuthTextField } from "@/components/auth-text-field";
 import { SocialAuthButton } from "@/components/social-auth-button";
 import { VerificationModal } from "@/components/verification-modal";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { resolveClerkAuthError } from "@/lib/clerk";
 import { posthog } from "@/lib/posthog";
-import { Colors } from "@/theme";
 import { useClerk, useSignIn } from "@clerk/expo";
 import { useSSO } from "@clerk/expo/experimental";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,6 +27,7 @@ export default function SignIn() {
   const { signIn } = useSignIn();
   const { startSSOFlow } = useSSO();
   const { signOut } = useClerk();
+  const colors = useThemeColors();
 
   const [email, setEmail] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
@@ -89,7 +90,7 @@ export default function SignIn() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -101,7 +102,7 @@ export default function SignIn() {
           hitSlop={8}
           className="h-10 w-10 items-start justify-center"
         >
-          <Ionicons name="chevron-back" size={26} color={Colors.textPrimary} />
+          <Ionicons name="chevron-back" size={26} color={colors.textPrimary} />
         </TouchableOpacity>
 
         <ScrollView
