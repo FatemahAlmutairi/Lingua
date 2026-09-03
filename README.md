@@ -1,51 +1,84 @@
-# Welcome to your Expo app 👋
+# React Native Language-Learning Platform
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-## Get started
+This application is a full-featured React Native language-learning platform that leverages a sophisticated AI teacher for real-time voice interaction. Powered by a modern tech stack including Expo, TypeScript, Zustand, and Stream, it combines secure authentication with Clerk, production-ready analytics with PostHog, and automated code review with CodeRabbit. From onboarding to lessons, it guides users through a natural speak-and-respond flow, delivering an immersive conversational experience that feels like having a personal tutor in your pocket.
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## Tech Stack
 
-2. Start the app
+| Tool | Purpose |
+| :--- | :--- |
+| **React Native** | Cross-platform mobile framework |
+| **Expo** | Development, build, and deployment tools |
+| **TypeScript** | Type-safe JavaScript |
+| **NativeWind** | Tailwind CSS for React Native |
+| **Zustand** | Global state management |
+| **Clerk** | Authentication and user management |
+| **Stream** | Real-time AI voice infrastructure |
+| **PostHog** | Product analytics and session recording |
+| **CodeRabbit** | AI-powered code review |
 
-   ```bash
-   npx expo start
-   ```
+---
 
-In the output, you'll find options to open the app in a
+## Features
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- **Onboarding Flow** – Language selection and goal setting
+- **Auth Pages** – Email and social login with Clerk
+- **Real-Time AI Teacher** – Immersive voice interaction with Stream
+- **Lesson Interface** – Polished UI with NativeWind
+- **State Management** – Clean Zustand logic
+- **Analytics and Review** – PostHog and CodeRabbit integration
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
-
-When you're ready, run:
+## Run It
 
 ```bash
-npm run reset-project
+git clone https://github.com/adrianhajdin/react-native-lingua.git
+cd react-native-lingua
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Scan the QR code with Expo Go on your phone. Press `a` for Android, `i` for iOS, `w` for web, `r` to reload, and `m` for the dev menu.
 
-## Learn more
+---
 
-To learn more about developing your project with Expo, look at the following resources:
+## Project Structure
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+| File / Directory | Description |
+| :--- | :--- |
+| `app/` | Main app screens and navigation |
+| `components/` | Reusable UI components |
+| `hooks/` | Custom React hooks |
+| `store/` | Zustand state management |
+| `utils/` | Helper functions |
+| `.env` | Environment variables |
 
-## Join the community
+---
 
-Join our community of developers creating universal apps.
+## Environment Variables
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
-# Lingua
+Create a `.env` file in the root directory:
+
+```env
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=
+POSTHOG_PROJECT_TOKEN=
+POSTHOG_HOST=
+STREAM_API_KEY=
+STREAM_API_SECRET=
+VISION_AGENT_URL=http://localhost:8000
+OPENAI_API_KEY=
+```
+
+Replace placeholders with your actual credentials from Clerk, PostHog, Stream, and OpenAI.
+
+---
+
+## Requirements
+
+- Git
+- Node.js
+- npm
+- Expo Go (installed on your mobile device)
